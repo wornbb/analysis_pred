@@ -5,7 +5,7 @@ vioP = 5;
 
 % load data
 exp = "Yaswan2c";
-batch_size = 5000;
+batch_size = 1000;
 data = get_batch_data(exp,1, batch_size);
 % preprocessing
 vg_normed = normalize(data);
