@@ -10,6 +10,6 @@ function b = batch_lasso_l2(x,y,opt_t)
         variable b(row, col)
         minimize( norm(y-b*x, Inf) )
         subject to
-            sum(norms(b')) <= t
+            sum(norms(b'),2) <= t
     cvx_end
 end
