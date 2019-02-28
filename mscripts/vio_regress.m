@@ -33,9 +33,10 @@ obj = norm(E);
 disp(["norm of Error: ", obj])
 
 base = 0.01;
+disp(["total entries: ", size(Yt,1)*size(Yt,2)]);
 for k = 1:3:21
     g = base * k;
     good = (abs(E./Yt) <= g);
-    disp(["total correct prediction with acc ", g, ":", sum(good)]);
+    disp(["total correct prediction with acc ", g, ":", sum(sum(good))]);
 end
 
