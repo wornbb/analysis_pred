@@ -19,7 +19,7 @@ b = batch_lasso_l2(x,y,15);
 b_norm = norms(b);
 best_sensor = max(b_norm);
 good_sensor = (b_norm >= 0.8 * best_sensor);
-[a,Sigma,E,CovB,logL] = mvregress(X(:,good_sensor),Y,'algorithm','cwls');
+[a ,c] = my_ols(X(good_sensor,:),Y);
 toc
 
 % testing 
