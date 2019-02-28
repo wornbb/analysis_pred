@@ -13,8 +13,8 @@ X = data(1:2:end,:);
 % take even index values as prediciton for training
 Y = data(1:2*50:end,:);
 % preprocessing
-x = normalize(x);
-y = normalize(y);
+x = normalize(X);
+y = normalize(Y);
 b = batch_lasso_l2(x,y,15);
 b_norm = norms(b);
 best_sensor = max(b_norm);
