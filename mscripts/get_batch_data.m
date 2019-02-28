@@ -19,7 +19,7 @@ function batch_data = get_batch_data(name, iter, batch_size)
     for k = 1:batch_size
         tline = fgetl(fid);
         matrix1D = str2num(tline);
-        batch_data(:,k + skip) = matrix1D';
+        batch_data(:,k + offset) = matrix1D';
     end
         
     fclose(fid);
