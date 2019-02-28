@@ -30,12 +30,5 @@ Yt = test_data(2:2*50:end,:);
 %results
 E = Yt - a*Xt(good_sensor,:) - c;
 obj = norm(E);
-disp(["norm of Error: ", obj])
-
-base = 0.01;
-for k = 1:3:21
-    g = base * k;
-    good = (abs(E./Yt) <= g);
-    disp(["total correct prediction with acc ", g, ":", sum(good)]);
-end
+good = (abs(E./Yt) <= 0.01);
 
