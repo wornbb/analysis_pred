@@ -10,16 +10,16 @@ function batch_data = get_batch_data(name, iter, batch_size)
     batch_data = zeros(length(matrix1D), batch_size);
     frewind(fid);
    % skip unwanted cycles
-    skip = (iter - 1) * batch_size;
+    offset = (iter - 1) * batch_size;
     for k = 1:skip
         fgetl(fid);
     end
     % real loading
     target = iter * batch_size;
-    for k = (1 + skip):target
+    for k = 1:batch_size
         tline = fgetl(fid);
         matrix1D = str2num(tline);
-        batch_data(:,k) = matrix1D';
+        batch_data(:,k + skip) = matrix1D';
     end
         
     fclose(fid);
