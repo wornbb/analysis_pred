@@ -4,7 +4,7 @@ Vth = 0.8;
 vioP = 5;
 % training
 % load data
-exp = "Yaswan2c";
+exp = ["Yaswan2c"];
 batch_size = 100;
 data = get_batch_data(exp,1, batch_size);
 %vg_normed = normalize(data);

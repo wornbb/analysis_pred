@@ -6,7 +6,7 @@ function b = batch_lasso_l2(x,y,opt_t)
     col = size(x,1);
     row = size(y,1);
 
-    cvx_begin
+    cvx_begin quiet
         variable b(row, col)
         minimize( norm(y-b*x, Inf) )
         subject to
