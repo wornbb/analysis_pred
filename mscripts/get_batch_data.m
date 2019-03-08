@@ -1,7 +1,6 @@
-function batch_data = get_batch_data(name, iter, batch_size)
+function batch_data = get_batch_data(name, iter, batch_size, root)
     % data (2D) is loaded as a vecter, serialization: from top left to bot
     % right row wise.
-    root = "/data/yi/vioPred/data";
     fname = name + ".gridIR";
     f = fullfile(root, name,  fname);
     fid = fopen(f);
