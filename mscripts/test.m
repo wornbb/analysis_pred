@@ -20,9 +20,10 @@ for k = 1:n
     As = cat(3, solution(:).sets.A);
     Axs = batch_mtimes(As, data(k).variable.x(solution(k).selection, :, :));
     Axs = permute(Axs, [3, 1, 2]);
+    p = ones(shift,1);
     cvx_begin
-        variable weight(shift,1)
-        minimize norm( permute(sum(Axs .* weight,1), [2,3,1]))
+        variable weight(shift,1,1)
+        minimize norm( permute(sum(Axs .* p,1), [2,3,1]))
     cvx_end
     solution(k).weight = weight;
 end
