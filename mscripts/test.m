@@ -19,8 +19,9 @@ end
 for k = 1:n
     As = cat(3, solution(:).sets.A);
     Axs = batch_mtimes(As, data(k).variable.x(solution(k).selection, :, :));
+    Axs = permute(Axs, [3, 1, 2]);
     cvx_begin
-        variable weight(shift)
+        variable weight(shift,1)
         minimize norm( data(k).variable.y -  Axs .* weight)
     cvx_end
     solution(k).weight = weight;
