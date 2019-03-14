@@ -22,7 +22,7 @@ for k = 1:n
     Axs = permute(Axs, [3, 1, 2]);
     cvx_begin
         variable weight(shift,1)
-        minimize norm( data(k).variable.y -  Axs .* weight)
+        minimize norm( data(k).variable.y -  permute(sum(Axs .* weight,1), [2,3,1]))
     cvx_end
     solution(k).weight = weight;
 end
