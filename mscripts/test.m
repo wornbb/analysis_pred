@@ -18,7 +18,7 @@ end
 
 for k = 1:n
     As = cat(3, solution(:).sets.A);
-    Axs = batch_mtimes(As, data(k).variable.x);
+    Axs = batch_mtimes(As, data(k).variable.x(solution(k).selection, :, :));
     cvx_begin
         variable weight(shift)
         minimize norm( data(k).variable.y -  Axs .* weight)
