@@ -3,8 +3,8 @@ function solution = initialize_solution(exps, mode)
         case "base"
             solution = struct('exp',cellstr(exps),'mode', mode,'selection',[], 'A',[], 'b',[], 'acc',[]);
         case "pbi" %prediciton by inference
-            shifts = 1000;
-            one_shift = struct('shifts',num2cell(1:shifts), 'A',[], 'b',[]);
-            solution = struct('exp',cellstr(exps), 'mode', mode, 'selection',[], 'sets', one_shift, 'acc',[]);
+            max_order = 1000;
+            orders = struct('order',num2cell(1:max_order), 'A',[], 'b',[]);
+            solution = struct('exp',cellstr(exps), 'mode', mode, 'selection',[], 'sets', orders, 'acc',[], 'order', []);
     end
 end
