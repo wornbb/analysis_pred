@@ -6,7 +6,7 @@ function solution = test_sol(data, solution)
     for k = 1:n
         switch solution(k).mode
             case "base"
-                E = data(k).variable.ytest - solution(k).A*data(k).variable.xtest(solution(k).selection,:); %- solution(k).b;        
+                E = data(k).variable.ytest - solution(k).A * data(k).variable.xtest(solution(k).selection,:); %- solution(k).b;        
                 diff = abs(E./data(k).variable.ytest);
                 solution(k).acc = batch_cmp(diff, test_acc);
             case "pbi"
