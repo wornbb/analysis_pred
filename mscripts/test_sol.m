@@ -11,7 +11,7 @@ function solution = test_sol(data, solution)
                 solution(k).acc = batch_cmp(diff, test_acc);
             case "pbi"
                 As = cat(3, solution(:).sets.A);
-                Axs = batch_mtimes(As, data(k).variable.xtest);
+                Axs = batch_mtimes(As, data(k).variable.xtest(solution(k).selection,:));
                 E = data(k).variable.ytest  -  Axs .* solution(k).weight; %- solution(k).b;        
                 diff = abs(E./data(k).variable.ytest);
                 solution(k).acc = batch_cmp(diff, test_acc);
