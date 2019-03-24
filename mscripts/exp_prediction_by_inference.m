@@ -33,5 +33,6 @@ for k = 1:length(forecast_powers)
     solution = opt_linear(data, solution);
     solution = test_sol(data, solution);
     solutions(k) = solution;
+    save('temp.mat');
 end
 save_solution(solution, root);
