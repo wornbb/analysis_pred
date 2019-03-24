@@ -12,7 +12,10 @@ function solution = test_sol(data, solution)
             case "pbi"
                 As = cat(3, solution(:).sets.A);
                 Axs = batch_mtimes(As, data(k).variable.xtest(solution(k).selection,:,:));
-                E = data(k).variable.ytest  -  Axs .* solution(k).weight; %- solution(k).b;        
+                pAxs = permute(Axs, [3 1 2]);
+                predition = pAxs .* solution(k).weight;
+                formated_pred = permute(predition, [2 3 1]);
+                E = data(k).variable.ytest  -  formated_pred; %- solution(k).b;        
                 diff = abs(E./data(k).variable.ytest);
                 solution(k).acc = batch_cmp(diff, test_acc);
         end
