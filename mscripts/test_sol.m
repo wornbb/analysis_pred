@@ -14,9 +14,9 @@ function solution = test_sol(data, solution)
                 Axs = batch_mtimes(As, data(k).variable.xtest(solution(k).selection,:,:));
                 pAxs = permute(Axs, [3 1 2]);
                 predition = pAxs .* solution(k).weight;
-                formated_pred = permute(predition, [2 3 1]);
-                E = data(k).variable.ytest  -  formated_pred; %- solution(k).b;        
-                diff = abs(E./data(k).variable.ytest);
+                formated_pred = sum(permute(predition, [2 3 1]),3);
+                E = data(k).variable.ytest(:,:,end)  -  formated_pred; %- solution(k).b;        
+                diff = abs(E./data(k).variable.ytest(:,:,end));
                 solution(k).acc = batch_cmp(diff, test_acc);
         end
     end

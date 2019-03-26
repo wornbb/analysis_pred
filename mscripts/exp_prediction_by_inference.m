@@ -6,7 +6,7 @@ step_skips = 1:4;
 cycle_skips = step_skips * step_per_cycle;
 forecast_powers = [step_skips, cycle_skips];
 solutions = zeros(size(forecast_powers));
-for k = 1:length(forecast_powers)
+parfor k = 1:length(forecast_powers)
     % define violation
     Vth = 0.8;
     vioP = 5;
@@ -33,6 +33,6 @@ for k = 1:length(forecast_powers)
     solution = opt_linear(data, solution);
     solution = test_sol(data, solution);
     solutions(k) = solution;
-    save('temp.mat');
+    %save('temp.mat');
 end
-save_solution(solution, root);
+save_solution(solutions, root);
