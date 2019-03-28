@@ -7,7 +7,7 @@ step_skips = 1:4;
 cycle_skips = step_skips * step_per_cycle;
 forecast_powers = [step_skips, cycle_skips];
 solutions = zeros(size(forecast_powers));
-for k = 1:length(forecast_powers)
+parfor k = 1:length(forecast_powers)
     % define violation
     Vth = 0.8;
     vioP = 5;
