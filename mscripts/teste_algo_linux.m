@@ -3,7 +3,7 @@ root = "/data/yi/vioPred/data";
 % training
 exps = ["Yaswan2c"];
 mode = "base";
-batch_size = 4000;
+batch_size = 10000;
 data = load_exps(exps,1, batch_size, root);
 test_ratio = 0.01;
 data = split_data(data, test_ratio, "random", 1/100);
