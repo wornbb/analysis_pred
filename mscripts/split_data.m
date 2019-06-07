@@ -16,6 +16,7 @@ function data = split_data(data, test_ratio, option, config)
             data(k).variable.ytest = data(k).variable.origin(y_index, ~train_set);
             data(k).variable.xtest = data(k).variable.origin(~y_index, ~train_set);
             data(k).variable.origin = [];
+            data(k).variable.y_index = y_index;
         end
         case "flp"
         % in this case, config is the floor plan.

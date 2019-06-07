@@ -24,7 +24,7 @@ function data = load_exps(exps, iter, batch_size, root)
         load(exp_save, "data");
     else
         n = length(exps);
-        data = struct('index',num2cell(1:n),'variable',struct('exp',[],'x',[],'y',[],'xbar',[],'ybar',[],'xtest',[],'ytest',[],'origin',[]));
+        data = struct('index',num2cell(1:n),'variable',struct('exp',[],'x',[],'y',[],'xbar',[],'ybar',[],'xtest',[],'ytest',[],'origin',[],'y_index',[]));
         for k = 1:n
             data(k).variable.exp = exps(k);
             data(k).variable.origin = get_batch_data(exps(k), iter, batch_size, root);
