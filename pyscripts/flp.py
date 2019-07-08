@@ -92,25 +92,5 @@ def flp_filter(occurrence, umap, unit_digit):
     return np.array([],dtype=np.double)
 
 
-if __name__ == "__main__":
 
-    gridIR = "C:\\Users\\Yi\\Desktop\\Yaswan2c\\Yaswan2c.gridIR"
-    maxlen = 5000
-    start_line = 10000
-    occurrence = np.array([],dtype=np.double)
-    for index in range(100000):
-        x_train = loading.read_volt_grid(gridIR, maxlen, maxlen * index)
-        occurrence = eagle.get_violation(x_train, occurrence, thres=5)    
-
-    fname = r"C:\Users\Yi\Desktop\Software reference\VoltSpot-2.0\example.flp"
-    flp = load_flp(fname)
-    umap = get_mask(flp, x_train.shape[0])
-    
-    result = []
-    for unit in umap['decoder']:
-        if unit[2]:
-            segmented = flp_filter(occurrence, umap, unit[1])
-            result = eagle.eagle_eye(segmented, unit[2], result)
-
-    print(result)
 

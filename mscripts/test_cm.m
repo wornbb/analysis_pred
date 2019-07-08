@@ -1,5 +1,5 @@
 function solution = test_cm(data, solution)
-    th = 0.05;
+    th = 0.04;
     n = length(data);
     for k = 1:n
         switch solution(k).mode
