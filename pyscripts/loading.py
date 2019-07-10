@@ -172,6 +172,28 @@ def read_violation(file, lines_to_read=0, start_line=0, trace=0, thres=4, ref=1,
         print("Warning: File ends before enough instances collected. Total counts:", total - count)
     return (batch, dim)
 def generate_prediction_data(file, lines_to_read=0, selected_sensor=[], trace=20, pred_str=5, thres=4, ref=1, global_vio=True):
+    """Generate the voltage trace only at selected sensors. Generated trace batch will be balanced with violaions and normal.
+
+    Arguments:
+        file {str} -- gridIR name
+
+    Keyword Arguments:
+        lines_to_read {int} -- [description] (default: {0})
+        selected_sensor {list} -- mask for selecting sensors (default: {[]})
+        trace {int} -- length of the trace (default: {20})
+        pred_str {int} -- how many cpu cycles ahead to predict (default: {5})
+        thres {int} -- [description] (default: {4})
+        ref {int} -- [description] (default: {1})
+        global_vio {bool} -- determine whether the violation check is global or not.
+                            if true: traces are recorded as long as there is a violation on the grid.
+                            if false: traces are only recorded if violation happens at the selected nodes(default: {True})
+
+    Returns:
+        (batch, tag) -- batch: traces
+                        tag:   violation types:
+                                    0: no violation
+                                    1: local violation
+                                    2: global violation"""
     if not lines_to_read:
         lines_to_read = np.inf
     count = 0
@@ -179,8 +201,7 @@ def generate_prediction_data(file, lines_to_read=0, selected_sensor=[], trace=20
     tag = []
     total = count
     with open(file, 'r') as v:
-        for i in range(start_line):
-            v.readline()
+
         buffer = deque()
         #fill que
         for i in range(trace + pred_str -1):

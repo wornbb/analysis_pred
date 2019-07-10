@@ -8,6 +8,7 @@ import pickle
 import tensorflow as tf
 from loading import read_violation
 from keras import regularizers
+from keras.callbacks import ModelCheckpoint
 config = tf.ConfigProto()
 config.gpu_options.allow_growth = True
 session = tf.Session(config=config)
@@ -29,10 +30,12 @@ print(len(y_test), sum(y_test))
 #model.add(LSTM(500, kernel_initializer='random_uniform', bias_initializer='zeros', return_sequences=True))
 
 #model.add(LSTM(500, kernel_initializer='random_uniform', bias_initializer='zeros', return_sequences=True))
+n = 16
+model.add(LSTM(n, kernel_initializer='random_uniform', bias_initializer='zeros', return_sequences=True))
+model.add(LSTM(n, kernel_initializer='random_uniform', bias_initializer='zeros', return_sequences=True))
+#model.add(LSTM(n, kernel_initializer='random_uniform', bias_initializer='zeros', return_sequences=True))
 
-model.add(LSTM(15, kernel_initializer='random_uniform', bias_initializer='zeros', return_sequences=True, kernel_regularizer=regularizers.l2(0.01)))
-model.add(LSTM(15, kernel_initializer='random_uniform', bias_initializer='zeros', return_sequences=True))
-model.add(LSTM(15, kernel_initializer='random_uniform', bias_initializer='zeros'))#, kernel_regularizer=regularizers.l2(0.01)))
+model.add(LSTM(n, kernel_initializer='random_uniform', bias_initializer='zeros'))
 #model.add(Bidirectional(LSTM(128, input_shape=(timestep,9), kernel_initializer='random_uniform', bias_initializer='zeros')))
 #model.add(Dropout(0.2))
 #model.add(Dense(50, activation='tanh'))
@@ -45,13 +48,20 @@ model.add(Dense(2, activation='softmax', kernel_initializer='random_uniform', bi
 model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['categorical_accuracy'])
 
 print('Train...')
+filepath = "model.{epoch:02d}-{val_loss:.3f}.hdf5"
+checkpoint = ModelCheckpoint(filepath, monitor='val_loss', verbose=1, mode='min')
 batch_size = 5
-
-model.fit(x_train[::100,:,:], y_train[::100],
+model.fit(x_train, y_train,
           batch_size=batch_size,
           validation_data=(x_test[::1000,:,:],y_test[::1000]),
-          epochs=50,
+          epochs=8,
+          callbacks=[checkpoint],
           verbose=1)
+# model.fit(x_train[::100,:,:], y_train[::100],
+#           batch_size=batch_size,
+#           validation_data=(x_test[::1000,:,:],y_test[::1000]),
+#           epochs=10,
+#           verbose=1)
 #pickle.dump( model, open( "single_sensor_lstm10.p", "wb" ) )
 
 
