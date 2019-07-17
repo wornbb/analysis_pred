@@ -1,6 +1,7 @@
 import numpy as np
 from keras.preprocessing import sequence
 from keras.models import Sequential
+from keras.layers import Dense,merge, Dropout,Add, LSTM, Bidirectional, BatchNormalization, Input
 from keras.datasets import imdb
 from keras.utils import to_categorical
 import pickle
@@ -25,29 +26,23 @@ x_test = np.expand_dims(x_test, axis=2)
 
 csv_logger = CSVLogger('training.csv',append=True)
 rnn_dropout = 0.1
-from keras.layers import Dense,merge, Dropout,Add, LSTM, Bidirectional, BatchNormalization, Input, Permute
 for m in [32,48,64]:
     for n in range(34,36,4):
         inputs = Input(shape=(34,1))
-        #shuffled = Permute((2,1), input_shape=(34,1))(inputs)
-        s = 5
-        for rnn in range(s):
+        for rnn in range(5):
             if rnn == 0:
-                lstm = Bidirectional(LSTM(n, recurrent_dropout=rnn_dropout, dropout=rnn_dropout, return_sequences=True))(inputs)
+                lstm = LSTM(n, recurrent_dropout=rnn_dropout, dropout=rnn_dropout, return_sequences=True)(inputs)
                 node = Add()([inputs, lstm])
-            elif rnn < s - 1:
-                lstm = Bidirectional(LSTM(n, recurrent_dropout=rnn_dropout, dropout=rnn_dropout, return_sequences=True))(node)
+            elif rnn < 4:
+                lstm = LSTM(n, recurrent_dropout=rnn_dropout, dropout=rnn_dropout, return_sequences=True)(node)
                 node = Add()([node, lstm])
             else:
-                node = Bidirectional(LSTM(n,recurrent_dropout=rnn_dropout, dropout=rnn_dropout,))(node)
+                node = LSTM(n,recurrent_dropout=rnn_dropout, dropout=rnn_dropout)(node)
                 #node = Add()([node, lstm])
-        node = Dense(m, activation='selu')(node)
-        node = BatchNormalization()(node)
-        node = Dense(m, activation='selu')(node)
-        node = BatchNormalization()(node)
-#        model.add(Dense(m, activation='selu', kernel_initializer='random_uniform', bias_initializer='zeros'))
- #       model.add(BatchNormalization())
-  #      model.add(Dense(2, activation='softmax', kernel_initializer='random_uniform', bias_initializer='zeros'))
+
+        #model.add(Dense(m, activation='selu', kernel_initializer='random_uniform', bias_initializer='zeros'))
+        #model.add(BatchNormalization())
+        #model.add(Dense(2, activation='softmax', kernel_initializer='random_uniform', bias_initializer='zeros'))
         prediction = Dense(2, activation='softmax', kernel_initializer='random_uniform', bias_initializer='zeros')(node)
         model = keras.models.Model(inputs=inputs, outputs=prediction)
         model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['categorical_accuracy'])

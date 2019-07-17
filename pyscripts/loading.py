@@ -193,13 +193,13 @@ def generate_prediction_data(file, lines_to_read=0, selected_sensor=[], trace=20
                         tag:   violation types:
                                     0: no violation
                                     1: local violation
-                                    2: global violation"""
+                                    2: global violation
+    """
     if not lines_to_read:
         lines_to_read = np.inf
     count = 0
     batch = []
     tag = []
-    total = count
     with open(file, 'r') as v:
 
         buffer = deque()
@@ -211,6 +211,10 @@ def generate_prediction_data(file, lines_to_read=0, selected_sensor=[], trace=20
                 buffer.append(v_formated)
             else:
                 print("this is a very unlikely situation. Why would there be a blank line in the middle of the file?")
+
+        if selected_sensor == "all":
+            global_vio = False
+            selected_sensor = np.ones_like(v_formated, dtype=int)
         counter_index = 0
         timer_index = 1
         norm_counter = 0
@@ -231,31 +235,30 @@ def generate_prediction_data(file, lines_to_read=0, selected_sensor=[], trace=20
                     # Total length of returned trace will remain n.
                     buffer.popleft()
                 # logic to process the grid
-                if vios.size and not local_vios.size:
+                if vios.size and not local_vios.size: # violation happens globally but not locally
                     norm[counter_index] += 1
                     norm[timer_index] += trace + pred_str
-                    count += 1
                     data = np.array(buffer)
                     batch.append(data[:trace, selected_sensor])
                     tag.append(1)
-                elif local_vios.size:
+                elif local_vios.size: # local violation
                     norm[counter_index] += 1
                     norm[timer_index] += trace + pred_str
-                    count += 1
                     data = np.array(buffer)
                     batch.append(data[:trace, selected_sensor])
                     tag.append(2)
-                else:
-                    norm[timer_index] -= 1
-                if norm[timer_index]==0 and norm[counter_index] != 0:
+                else: # normal
+                    if norm[counter_index] != 0: # only update timer if there is a counter.
+                        norm[timer_index] -= 1
+                if norm[timer_index] % (trace + pred_str)==0 and norm[counter_index] != 0:
                     norm[counter_index] -= 1
                     data = np.array(buffer)
                     batch.append(data[:trace, selected_sensor])
                     tag.append(0)
     if batch:
         batch = np.stack(batch)
-    if count > 0:
-        print("Warning: File ends before enough instances collected. Total counts:", total - count)
+    if norm[counter_index] > 0:
+        print("Warning: File ends before enough instances collected. Total counts:", norm[counter_index])
     return (batch, tag)
 if __name__ == "__main__":
     
@@ -279,8 +282,5 @@ if __name__ == "__main__":
     x_test  = np.hstack((vios_test, norm_test)).T
     x_train = np.expand_dims(x_train, axis=2)
     x_test = np.expand_dims(x_test, axis=2)
-    from keras.utils import to_categorical
-    y_train = to_categorical(y_train)
-    y_test = to_categorical(y_test)
 
     pickle.dump( [x_train,y_train,x_test,y_test], open( "all_vios.p", "wb" ) )
