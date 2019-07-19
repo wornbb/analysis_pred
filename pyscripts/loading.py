@@ -41,7 +41,7 @@ def get_violation(data, occurrence=np.array([],dtype=np.double), ref=1, thres=4,
         data {1D/2D np array} -- array from loading.py. If 2D, square grids are stored in columns witch are ordered in time.
         thres {int} -- a percentage defines the margin for threshold
         ref {int} -- the reference (expected) voltage 
-        prev {list} -- a collection of previous CPU cycles. Only used when a trace is needed
+        prev {np 2darray} -- a collection of previous CPU cycles. Only used when a trace is needed
         mode {int} -- When mode = 0, it only returns the violation point at a certain time
                       When mode = n where n is not 0, it returns a voltage trace with length of n time points.
         reverse {bool} -- Default: False. When set to true, it will return the coordinate of non-voltage violation node instead
@@ -89,8 +89,7 @@ def get_violation(data, occurrence=np.array([],dtype=np.double), ref=1, thres=4,
         #new_occurrence = np.hstack(new_occurrence)
         new_occurrence = np.row_stack(current_report)
         if mode:
-            trace = [t[vios] for t in prev]
-            trace = np.array(trace)
+            trace = prev[:,vios]
             new_occurrence = np.vstack((new_occurrence, trace))
 
     if occurrence.size:
@@ -202,16 +201,16 @@ def generate_prediction_data(file, lines_to_read=0, selected_sensor=[], trace=20
     tag = []
     with open(file, 'r') as v:
 
-        buffer = deque()
+        buffer = []
         #fill que
-        for i in range(trace + pred_str -1):
+        for i in range(trace + pred_str):
             vline = v.readline()
             v_formated = np.fromstring(vline, sep='    ', dtype='float')
             if v_formated.size:
                 buffer.append(v_formated)
             else:
                 print("this is a very unlikely situation. Why would there be a blank line in the middle of the file?")
-
+        buffer = np.array(buffer)
         if selected_sensor == "all":
             global_vio = False
             selected_sensor = np.ones_like(v_formated, dtype=int)
@@ -225,35 +224,34 @@ def generate_prediction_data(file, lines_to_read=0, selected_sensor=[], trace=20
             lines_to_read -= 1
             vline = v.readline()
             v_formated = np.fromstring(vline, sep='    ', dtype='float')
+            #v_formated = vline.split()
+            #v_formated = np.array(v_formated, dtype=float)
             if v_formated.size:
                 vios = get_violation(v_formated, prev=buffer, mode=trace)
                 if not global_vio:
                     local_vios = get_violation(v_formated[selected_sensor], prev=buffer, mode=trace)
-                buffer.append(v_formated)
-                if len(buffer) == trace: 
-                    # The length of buffered trace will be n-1. The "-1" was compensated by the most recent voltage point.
-                    # Total length of returned trace will remain n.
-                    buffer.popleft()
+                
+                # update buffer like a queue. queue is too slow for other operation
+                buffer = np.roll(buffer, -1, axis=0)
+                #buffer[:-1,:] = buffer[1:,:]
+                buffer[-1,:] = v_formated
                 # logic to process the grid
                 if vios.size and not local_vios.size: # violation happens globally but not locally
                     norm[counter_index] += 1
                     norm[timer_index] += trace + pred_str
-                    data = np.array(buffer)
-                    batch.append(data[:trace, selected_sensor])
+                    batch.append(buffer[:trace, selected_sensor])
                     tag.append(1)
                 elif local_vios.size: # local violation
                     norm[counter_index] += 1
                     norm[timer_index] += trace + pred_str
-                    data = np.array(buffer)
-                    batch.append(data[:trace, selected_sensor])
+                    batch.append(buffer[:trace, selected_sensor])
                     tag.append(2)
                 else: # normal
                     if norm[counter_index] != 0: # only update timer if there is a counter.
                         norm[timer_index] -= 1
                 if norm[timer_index] % (trace + pred_str)==0 and norm[counter_index] != 0:
                     norm[counter_index] -= 1
-                    data = np.array(buffer)
-                    batch.append(data[:trace, selected_sensor])
+                    batch.append(buffer[:trace, selected_sensor])
                     tag.append(0)
     if batch:
         batch = np.stack(batch)
