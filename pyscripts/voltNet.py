@@ -5,7 +5,8 @@ import numpy as np
 from loading import generate_prediction_data
 from tensorflow.keras.utils import to_categorical
 from tensorflow.keras.callbacks import ModelCheckpoint, CSVLogger
-
+from clr_callback import*
+from tensorflow.keras.optimizers import *
 with h5py.File('./balanced_grid_sensor.h5','r') as f:
       data = f["data"].value
       tag = f["tag"].value
@@ -32,12 +33,12 @@ x = Input(shape=(x_train.shape[1], x_train.shape[2], 1))
 node = TimeDistributed(sensor_model)(x)
 node = Flatten()(node)
 node = BatchNormalization()(node)
-node = sparsity.prune_low_magnitude(Dense(1024, activation='selu'), **pruning_params)(node)
+node = sparsity.prune_low_magnitude(Dense(100, activation='selu'), **pruning_params)(node)
 node = BatchNormalization()(node)
-node = Dense(512, activation="selu")(node)
+node = Dense(50, activation="selu")(node)
 output = Dense(2, activation='softmax', kernel_initializer='random_uniform', bias_initializer='zeros')(node)
 model = tf.keras.models.Model(inputs=x, outputs=output)
-model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['categorical_accuracy'])
+model.compile(loss='categorical_crossentropy', optimizer='sgd', metrics=['categorical_accuracy'])
 model.summary()
 
 
@@ -50,6 +51,7 @@ model.fit(x_train, y_train,
       callbacks=[  sparsity.UpdatePruningStep(),
                   sparsity.PruningSummaries(log_dir=logdir, profile_batch=0),
                   CSVLogger('pruned_training.csv',append=True),
-                  ModelCheckpoint(filepath, monitor='val_categorical_accuracy',save_best_only=True, verbose=1, mode='max')
+                  ModelCheckpoint(filepath, monitor='val_categorical_accuracy',save_best_only=True, verbose=1, mode='max'),
+                  CyclicLR(base_lr=0.05, max_lr=0.15, mode='triangular2')
                   ],
       verbose=1)

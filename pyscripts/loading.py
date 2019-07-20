@@ -223,6 +223,8 @@ def generate_prediction_data(file, lines_to_read=0, selected_sensor=[], trace=20
         while lines_to_read:
             lines_to_read -= 1
             vline = v.readline()
+            if vline == '':
+                break
             v_formated = np.fromstring(vline, sep='    ', dtype='float')
             #v_formated = vline.split()
             #v_formated = np.array(v_formated, dtype=float)

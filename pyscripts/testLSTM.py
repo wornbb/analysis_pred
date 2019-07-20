@@ -1,14 +1,16 @@
 import numpy as np
-from keras.preprocessing import sequence
-from keras.models import Sequential
-from keras.datasets import imdb
-from keras.utils import to_categorical
+from tensorflow.keras.preprocessing import sequence
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.datasets import imdb
+from tensorflow.keras.utils import to_categorical
 import pickle
 import tensorflow as tf
 from loading import read_violation
-from keras import regularizers
-from keras.callbacks import ModelCheckpoint, CSVLogger
-import keras
+from tensorflow.keras import regularizers
+from tensorflow.keras.callbacks import ModelCheckpoint, CSVLogger
+import tensorflow.keras as keras
+from clr_callback import*
+
 config = tf.ConfigProto()
 config.gpu_options.allow_growth = True
 session = tf.Session(config=config)
@@ -41,13 +43,14 @@ for m in [32,48,64]:
             else:
                 node = Bidirectional(LSTM(n,recurrent_dropout=rnn_dropout, dropout=rnn_dropout,))(node)
                 #node = Add()([node, lstm])
-        node = Dense(m, activation='selu')(node)
+
+
+
+        selu_ini = keras.initializers.RandomNormal(mean=0.0, stddev=1/40, seed=None)
+        node = Dense(m, activation='selu', kernel_initializer=selu_ini)(node)
         node = BatchNormalization()(node)
-        node = Dense(m, activation='selu')(node)
+        node = Dense(m, activation='selu', kernel_initializer=selu_ini)(node)
         node = BatchNormalization()(node)
-#        model.add(Dense(m, activation='selu', kernel_initializer='random_uniform', bias_initializer='zeros'))
- #       model.add(BatchNormalization())
-  #      model.add(Dense(2, activation='softmax', kernel_initializer='random_uniform', bias_initializer='zeros'))
         prediction = Dense(2, activation='softmax', kernel_initializer='random_uniform', bias_initializer='zeros')(node)
         model = keras.models.Model(inputs=inputs, outputs=prediction)
         model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['categorical_accuracy'])
@@ -55,12 +58,13 @@ for m in [32,48,64]:
         print('Train...')
         filepath = "nn." + str(m) + ".biLSTM." + str(n) + ".{epoch:02d}-{val_loss:.3f}.hdf5"
         checkpoint = ModelCheckpoint(filepath, monitor='val_categorical_accuracy',save_best_only=True, verbose=1, mode='max')
+        clr = CyclicLR(base_lr=0.05, max_lr=0.15, mode='triangular2')
         batch_size = 5
         model.fit(x_train[::100,:,:], y_train[::100],
                 batch_size=batch_size,
                 validation_data=(x_test[::1000,:,:],y_test[::1000]),
                 epochs=25,
-                callbacks=[checkpoint, csv_logger],
+                callbacks=[checkpoint, csv_logger, clr],
                 verbose=1)
 # model.fit(x_train[::100,:,:], y_train[::100],
 #           batch_size=batch_size,

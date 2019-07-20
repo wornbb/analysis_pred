@@ -9,7 +9,7 @@ if os.name == 'nt':
       fname = "C:\\Users\\Yi\\Desktop\\Yaswan2c\\Yaswan2c.gridIR"
 else:
       fname = "/data/yi/voltVio/analysis/raw/blackscholes2c.gridIR"
-(data, tag) = generate_prediction_data(fname,lines_to_read=1000000, selected_sensor='all',trace=45)
+(data, tag) = generate_prediction_data(fname, selected_sensor='all',trace=45)
 print("Loading complete")
 data = np.moveaxis(data, 2, 1)
 from sklearn.preprocessing import MinMaxScaler
