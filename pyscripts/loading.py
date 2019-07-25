@@ -170,7 +170,7 @@ def read_violation(file, lines_to_read=0, start_line=0, trace=0, thres=4, ref=1,
     if count > 0:
         print("Warning: File ends before enough instances collected. Total counts:", total - count)
     return (batch, dim)
-def generate_prediction_data(file, lines_to_read=0, selected_sensor=[], trace=20, pred_str=5, thres=4, ref=1, global_vio=True):
+def generate_prediction_data(file, lines_to_read=0, selected_sensor=[], trace=39, pred_str=5, thres=4, ref=1, global_vio=True):
     """Generate the voltage trace only at selected sensors. Generated trace batch will be balanced with violaions and normal.
 
     Arguments:
@@ -179,7 +179,7 @@ def generate_prediction_data(file, lines_to_read=0, selected_sensor=[], trace=20
     Keyword Arguments:
         lines_to_read {int} -- [description] (default: {0})
         selected_sensor {list} -- mask for selecting sensors (default: {[]})
-        trace {int} -- length of the trace (default: {20})
+        trace {int} -- length of the trace (default: {20}) The exact lenght = trace - pred_str
         pred_str {int} -- how many cpu cycles ahead to predict (default: {5})
         thres {int} -- [description] (default: {4})
         ref {int} -- [description] (default: {1})
@@ -201,18 +201,18 @@ def generate_prediction_data(file, lines_to_read=0, selected_sensor=[], trace=20
     tag = []
     with open(file, 'r') as v:
 
-        buffer = []
+        buffer = [] # buffer is a queue with length trace
         #fill que
-        for i in range(trace + pred_str):
+        for i in range(trace):
             vline = v.readline()
             v_formated = np.fromstring(vline, sep='    ', dtype='float')
             if v_formated.size:
                 buffer.append(v_formated)
             else:
                 print("this is a very unlikely situation. Why would there be a blank line in the middle of the file?")
-        buffer = np.array(buffer)
+        buffer = np.array(buffer) # make buffer a np array to fasten the operation
         if selected_sensor == "all":
-            global_vio = False
+            global_vio = False # disable tag=2
             selected_sensor = np.ones_like(v_formated, dtype=int)
         counter_index = 0
         timer_index = 1
@@ -220,46 +220,47 @@ def generate_prediction_data(file, lines_to_read=0, selected_sensor=[], trace=20
         norm_timer = 0
         norm = [norm_counter, norm_timer]
         local_vios = np.array([])
-        while lines_to_read:
+        vios = np.array([])
+        while lines_to_read > 0:
             lines_to_read -= 1
             vline = v.readline()
             if vline == '':
                 break
             v_formated = np.fromstring(vline, sep='    ', dtype='float')
-            #v_formated = vline.split()
-            #v_formated = np.array(v_formated, dtype=float)
+
             if v_formated.size:
-                vios = get_violation(v_formated, prev=buffer, mode=trace)
                 if not global_vio:
-                    local_vios = get_violation(v_formated[selected_sensor], prev=buffer, mode=trace)
-                
+                    local_vios = get_violation(v_formated[selected_sensor], prev=buffer, mode=trace, ref=ref, thres=thres)
+                else:
+                    vios = get_violation(v_formated, prev=buffer, mode=trace, ref=ref, thres=thres)
+                    
                 # update buffer like a queue. queue is too slow for other operation
                 buffer = np.roll(buffer, -1, axis=0)
-                #buffer[:-1,:] = buffer[1:,:]
                 buffer[-1,:] = v_formated
                 # logic to process the grid
                 if vios.size and not local_vios.size: # violation happens globally but not locally
                     norm[counter_index] += 1
-                    norm[timer_index] += trace + pred_str
-                    batch.append(buffer[:trace, selected_sensor])
+                    norm[timer_index] += trace + pred_str - 1
+                    batch.append(buffer[:trace-pred_str, selected_sensor].T)
                     tag.append(1)
                 elif local_vios.size: # local violation
                     norm[counter_index] += 1
-                    norm[timer_index] += trace + pred_str
-                    batch.append(buffer[:trace, selected_sensor])
+                    norm[timer_index] += trace + pred_str - 1
+                    batch.append(buffer[:trace-pred_str, selected_sensor].T)
                     tag.append(2)
                 else: # normal
                     if norm[counter_index] != 0: # only update timer if there is a counter.
                         norm[timer_index] -= 1
                 if norm[timer_index] % (trace + pred_str)==0 and norm[counter_index] != 0:
                     norm[counter_index] -= 1
-                    batch.append(buffer[:trace, selected_sensor])
+                    batch.append(buffer[:trace-pred_str, selected_sensor].T)
                     tag.append(0)
     if batch:
         batch = np.stack(batch)
     if norm[counter_index] > 0:
         print("Warning: File ends before enough instances collected. Total counts:", norm[counter_index])
     return (batch, tag)
+
 if __name__ == "__main__":
     
     fname = "C:\\Users\\Yi\\Desktop\\Yaswan2c\\Yaswan2c.gridIR"

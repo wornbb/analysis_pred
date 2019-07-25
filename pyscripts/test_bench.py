@@ -16,8 +16,8 @@ x_test = np.expand_dims(x_test, axis=2)
 #model = load_model('nn.32.model.12-0.684.hdf5')
 #model = load_model('nn.32.model.15-0.605.hdf5')
 #model = load_model('nn.34.biLSTM.18-0.171.hdf5') #96.45
-model = load_model('nn.26.biLSTM.32.14-0.381.hdf5')
+model = load_model('lstm.25.nn.25.16-0.888-0.297.hdf5')
 
-scores = model.evaluate(x_test, y_test, verbose=0)
-print(sum(y_test)/len(y_train))
+scores = model.evaluate(x_test[:,:-5,:], y_test, verbose=0)
+print(sum(y_test)/len(y_test))
 print("Accuracy: %.2f%%" % (scores[1]*100))

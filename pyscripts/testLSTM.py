@@ -25,43 +25,36 @@ x_train = np.expand_dims(x_train, axis=2)
 x_test = scaler.fit_transform(x_test[:,:-5,0])
 x_test = np.expand_dims(x_test, axis=2)
 
+print(x_train.shape)
 csv_logger = CSVLogger('training.csv',append=True)
-rnn_dropout = 0.1
 from keras.layers import Dense,merge, Dropout,Add, LSTM, Bidirectional, BatchNormalization, Input, Permute
-for m in [32,48,64]:
-    for n in range(34,36,4):
-        inputs = Input(shape=(34,1))
-        #shuffled = Permute((2,1), input_shape=(34,1))(inputs)
-        s = 5
-        for rnn in range(s):
-            if rnn == 0:
-                lstm = Bidirectional(LSTM(n, recurrent_dropout=rnn_dropout, dropout=rnn_dropout, return_sequences=True))(inputs)
-                node = Add()([inputs, lstm])
-            elif rnn < s - 1:
-                lstm = Bidirectional(LSTM(n, recurrent_dropout=rnn_dropout, dropout=rnn_dropout, return_sequences=True))(node)
-                node = Add()([node, lstm])
-            else:
-                node = Bidirectional(LSTM(n,recurrent_dropout=rnn_dropout, dropout=rnn_dropout,))(node)
-                #node = Add()([node, lstm])
-        selu_ini = keras.initializers.RandomNormal(mean=0.0, stddev=1/40, seed=None)
-        node = Dense(m, activation='selu', kernel_initializer=selu_ini)(node)
-        node = BatchNormalization()(node)
-        node = Dense(m, activation='selu', kernel_initializer=selu_ini)(node)
-        node = BatchNormalization()(node)
-        prediction = Dense(1, activation='sigmoid', kernel_initializer='random_uniform', bias_initializer='zeros')(node)
-        model = keras.models.Model(inputs=inputs, outputs=prediction)
-        model.compile(loss='binary_crossentropy', optimizer='sgd', metrics=['accuracy'])
-        model.summary()
+for n in range(25,36):
+    for m in  range(25,36):
+        model = Sequential()
+        print(len(y_test), sum(y_test))
+        model.add(Bidirectional(LSTM(n, kernel_initializer='random_uniform', bias_initializer='zeros', return_sequences=True)))
+        model.add(Bidirectional(LSTM(n, kernel_initializer='random_uniform', bias_initializer='zeros', return_sequences=True)))
+        model.add(Bidirectional(LSTM(n, kernel_initializer='random_uniform', bias_initializer='zeros', return_sequences=True)))
+        model.add(Bidirectional(LSTM(n, kernel_initializer='random_uniform', bias_initializer='zeros')))
+        selu_ini = tf.keras.initializers.RandomNormal(mean=0.0, stddev=1/34, seed=None)
+
+        model.add(Dense(m, activation='selu', kernel_initializer=selu_ini, bias_initializer='zeros'))
+        model.add(Dropout(0.15))
+        model.add(Dense(m//2, activation='selu', kernel_initializer=selu_ini, bias_initializer='zeros'))
+        model.add(Dropout(0.15))
+        model.add(Dense(1, activation='sigmoid'))
+
+        model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+
         print('Train...')
-        filepath = "nn." + str(m) + ".biLSTM." + str(n) + ".{epoch:02d}-{val_loss:.3f}.hdf5"
+        filepath = "lstm." + str(n) + ".nn." + str(m) + ".{epoch:02d}-{val_acc:.3f}-{val_loss:.3f}.hdf5"
         checkpoint = ModelCheckpoint(filepath, monitor='val_acc',save_best_only=True, verbose=1, mode='max')
-        clr = CyclicLR(base_lr=0.05, max_lr=0.15, mode='triangular2')
         batch_size = 5
-        model.fit(x_train[::100,:,:], y_train[::100],
+        model.fit(x_train[::100,:,:],np.array(y_train[::100]),
                 batch_size=batch_size,
-                validation_data=(x_test[::1000,:,:],y_test[::1000]),
-                epochs=25,
-                callbacks=[checkpoint, csv_logger, clr],
+                validation_data=(x_test[::1000,:,:],np.array(y_test[::1000])),
+                epochs=18,
+                callbacks=[checkpoint, csv_logger],
                 verbose=1)
 # model.fit(x_train[::100,:,:], y_train[::100],
 #           batch_size=batch_size,
