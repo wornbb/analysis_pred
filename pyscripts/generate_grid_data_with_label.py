@@ -9,7 +9,7 @@ if os.name == 'nt':
       fname = "C:\\Users\\Yi\\Desktop\\Yaswan2c\\Yaswan2c.gridIR"
 else:
       fname = "/data/yi/voltVio/analysis/raw/freqmine2c.gridIR"
-(data, tag) = generate_prediction_data(fname, selected_sensor='all',trace=39, ref=0.8, pred_str=5, thres=4)
+(data, tag) = generate_prediction_data(fname, selected_sensor='all',trace=39, ref=1, pred_str=5, thres=4)
 print("Loading complete")
 from sklearn.preprocessing import MinMaxScaler
 scaler = MinMaxScaler(feature_range=(-0.5, 0.5))
