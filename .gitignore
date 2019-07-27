@@ -5,3 +5,16 @@
 *.json
 *.ipch
 *.bin
+*.csv
+*.p
+*.hdf5
+*.ipynb
+*.png
+pyscripts/prune.log/
+thesis fig/
+*.h5
+pyscripts/profile.log
+pyscripts/kkk.npy
+pyscripts/h5py/h5f.pyx
+pyscripts/CLR-master/README.md
+pyscripts/CLR-master/LICENSE
