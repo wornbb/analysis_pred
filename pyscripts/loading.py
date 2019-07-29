@@ -153,7 +153,7 @@ def read_violation(file, lines_to_read=0, start_line=0, trace=0, thres=4, ref=1,
             vline = v.readline()
             v_formated = np.fromstring(vline, sep='    ', dtype='float')
             if v_formated.size:
-                vios = get_violation(v_formated, prev=buffer, mode=trace, reverse=reverse)
+                vios = get_violation(v_formated, prev=np.array(buffer), mode=trace, reverse=reverse)
                 buffer.append(v_formated)
                 if len(buffer) == trace: 
                     # The length of buffered trace will be n-1. The "-1" was compensated by the most recent voltage point.
@@ -213,7 +213,7 @@ def generate_prediction_data(file, lines_to_read=0, selected_sensor=[], trace=39
         buffer = np.array(buffer) # make buffer a np array to fasten the operation
         if selected_sensor == "all":
             global_vio = False # disable tag=2
-            selected_sensor = np.ones_like(v_formated, dtype=int)
+            selected_sensor = np.ones_like(v_formated, dtype=bool)
         counter_index = 0
         timer_index = 1
         norm_counter = 0
@@ -257,15 +257,17 @@ def generate_prediction_data(file, lines_to_read=0, selected_sensor=[], trace=39
                     tag.append(0)
     if batch:
         batch = np.stack(batch)
+    else:
+        print("Error, no violation found!!!")
     if norm[counter_index] > 0:
         print("Warning: File ends before enough instances collected. Total counts:", norm[counter_index])
     return (batch, tag)
 
 if __name__ == "__main__":
     
-    fname = "C:\\Users\\Yi\\Desktop\\Yaswan2c\\Yaswan2c.gridIR"
+    fname = "F:\\Yaswan2c\\Yaswan2c.gridIR"
     #fname = "C:\\Users\\Yi\\Desktop\\Yaswan2c\\test.gridIR"
-    (vios_data, dim) = read_violation(fname, start_line=200,trace=40)
+    (vios_data, dim) = read_violation(fname, start_line=200,trace=40, lines_to_read=10000)
     (norm_data, dim) = read_violation(fname, lines_to_read=25, trace=40, count=2000, reverse=True)
     vios_data = vios_data[4:,:]
     norm_data = norm_data[4:,:]

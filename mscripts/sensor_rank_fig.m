@@ -1,4 +1,4 @@
-% 
+
 % root = "C:\Users\Yi\Desktop";
 % clear_loads(root);
 % % training
@@ -31,13 +31,15 @@
 % 
 % forecast_powers = 5;
 % solutions = zeros(size(3:9));
-parfor index = 1:7
+% solutions = struct('index',num2cell(1:length(1:7)),'sol',[]);
+% save('sensor_rank_fig.mat')
+for index = 1:3:7
     quality_factor = 0.1 * (index + 2);
-    solutions(index) = solution_select;
-    solutions(index).selection = (rank_1 >= quality_factor * best_sensor);
+    solutions(index).sol = solution_select;
+    solutions(index).sol.selection = (rank_1 >= quality_factor * best_sensor);
     order = 3;
-    solutions(index) = ols_prediction(normed_split, solutions(index), order, forecast_powers);
+    solutions(index).sol = ols_prediction(normed_split, solutions(index).sol, order, forecast_powers);
     data = pbi_test_prepare(normed_split, order, forecast_powers);
-    solutions(index) = opt_linear(data, solutions(index));
-    solutions(index) = test_sol(data, solutions(index));
+    solutions(index).sol = opt_linear(data, solutions(index).sol);
+    solutions(index).sol = test_sol(data, solutions(index));
 end
