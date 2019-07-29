@@ -56,14 +56,19 @@ def loss_correlation(y_true, selected):
 
 if __name__ == "__main__":
     fname = "C:\\Users\\Yi\\Desktop\\Yaswan2c\\Yaswan2c.gridIR"
-    n = 5000
+    n = 40
     data = read_volt_grid(fname, n)
     [data_test, data_train] = np.split(data,2,axis=1)
     x_train = data_train[::2,:].T
     y_train = data_train[1::4,:].T
     lambda_ = 25
     def estimate(B):
+        B = B.reshape((x_train.shape[1], y_train.shape[1]))
         return (1./(2*n)) * np.sum((y_train - np.dot(x_train, B))**2) +  lambda_ * np.sum(np.abs(B))
+    from scipy.optimize import minimize
+    a = np.ones((x_train.shape[1], y_train.shape[1]))
+    res = minimize(estimate, a)
+    print(estimate(res['x']))
     # start = 1
     # end = 100
     # jump = 20
