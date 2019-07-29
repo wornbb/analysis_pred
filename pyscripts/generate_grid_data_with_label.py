@@ -8,7 +8,9 @@ import os
 if os.name == 'nt':
       fname = "F:\\Yaswan2c\\Yaswan2c.gridIR"
 else:
-      fname = "/data/yi/voltVio/analysis/raw/freqmine2c.gridIR"
+      name = input("Give the simulation name")
+      fname = "/data/yi/voltVio/analysis/raw/" + name + ".gridIR"
+      print("loading " + fname)
 (data, tag) = generate_prediction_data(fname, selected_sensor='all',trace=39, ref=1, pred_str=5, thres=4, lines_to_read=10000)
 print("Loading complete")
 from sklearn.preprocessing import MinMaxScaler
