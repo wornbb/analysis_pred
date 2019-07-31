@@ -151,7 +151,7 @@ def read_violation(file, lines_to_read=0, start_line=0, trace=0, thres=4, ref=1,
                 buffer.append(v_formated)
             else:
                 print("this is a very unlikely situation. Why would there be a blank line in the file?")
-            buffer = np.array(buffer)
+        buffer = np.array(buffer)
         while lines_to_read > 0:
             if vline == '':
                 break
@@ -292,6 +292,7 @@ if __name__ == "__main__":
         "/data/yi/voltVio/analysis/raw/" + "freqmine2c"+ ".gridIR"
         "/data/yi/voltVio/analysis/raw/" + "facesim2c"+ ".gridIR"
         ]
+    #f_list = ["F:\\Yaswan2c\\Yaswan2c.gridIR"]
     for fname in f_list:
         #fname = "C:\\Users\\Yi\\Desktop\\Yaswan2c\\test.gridIR"
         (vios_data, dim) = read_violation(fname, start_line=200,trace=40)
