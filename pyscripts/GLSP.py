@@ -6,7 +6,35 @@ import pandas as pd
 from sklearn.metrics import make_scorer
 from loading import read_volt_grid
 from sklearn.preprocessing import StandardScaler
-class glsp(Lasso):
+class gl_model():
+    def init_selector(self, alpha=1.0, fit_intercept=True, normalize=False,
+                 precompute=False, copy_X=True, max_iter=1000,
+                 tol=1e-4, warm_start=False, positive=False,
+                 random_state=None, selection='cyclic'):
+        self.selector = gl_sensor_selector(alpha=alpha,fit_intercept=fit_intercept,
+            normalize=normalize, precompute=precompute, copy_X=copy_X,
+            max_iter=max_iter, tol=tol, warm_start=warm_start,
+            positive=positive, random_state=random_state,
+            selection=selection)
+    def init_predicor(self):
+        self.predictor = 123
+    def fit(self, x, y):
+        start = 1
+        end = 100
+        jump = 20
+        parameters = {'alpha':np.arange(start, end, jump) / (2*y.shape[1])}
+        # sensor selection
+        self.init_selector(max_iter=10000,fit_intercept=False,positive=True)
+        score_correlation = make_scorer(loss_correlation)
+        score_sensor_count = make_scorer(loss_sensor_count)
+        self.cv = GridSearchCV(ls, parameters, cv=2, refit= 'correlation', scoring={'correlation':score_correlation, 'count':score_sensor_count})
+        self.cv.fit(X=y_train, y=x_train)
+        self.selected_sensors = self.cv.best_estimator_.predict()
+        # data filtering
+        self.selected_x = x[:,self.selected_sensors]
+    def predict(self):
+    def evaluate(self):
+class gl_sensor_selector(Lasso):
     def __init__(self, alpha=1.0, fit_intercept=True, normalize=False,
                  precompute=False, copy_X=True, max_iter=1000,
                  tol=1e-4, warm_start=False, positive=False,
@@ -38,8 +66,8 @@ class glsp(Lasso):
         self.selected = cluster.labels_ == self.larger_center
         #print(np.linalg.norm(y.T - w.dot(x.T),1))
 
-    # def predict(self, x):
-    #     return self.selected
+    def predict(self, x):
+        return self.selected
 
 def loss_sensor_count(y_true, selected):
     return np.count_nonzero(selected)

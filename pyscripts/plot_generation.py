@@ -16,15 +16,14 @@ class benchmark_factory():
         fname = self.exp_name + "avg_acc_curve.data"
         plt_data = {"model_order": self.models, "x": range(len(self.models))}
         all_y = []
-        for benchmark in self.benchmarks:
+        for model in self.models:
             y = []
-            for model in self.models:
+            for benchmark in self.benchmarks:
                 score = model.evaluate(benchmark[0], benchmark[1])
                 y.append(score[1])
-            all_y.append(y)
-        all_y = np.mean(all_y, axis=0)
+            all_y.append(np.mean(y ))
         plt_data.y = all_y
-        pickle.dump(plt_data, open(fname, 'wb'))
+        pickle.dump([plt_data, self.model_list], open(fname, 'wb'))
     def save_acc_tbl(self):
         fname = self.exp_name + "acc_table.data"
         all_y = []
@@ -45,24 +44,25 @@ class benchmark_factory():
             dim = len(sensors)
             row = int(np.sqrt(dim))
             all_sensors.append(sensors.reshape((row, row)))
-        pickle.dump(all_sensors, open(fname, 'wb'))
+        pickle.dump([all_sensors, self.model_list], open(fname, 'wb'))
     def generate_confusion_matrix_data(self):
         fname = self.exp_name + "confusion_matrix.data"
-        all_y = []
-        for benchmark in self.benchmarks:
-            for model in self.models:
+        all_matrix = []
+        for model in self.models:
+            matrix = np.zeros((2,2))
+            for benchmark in self.benchmarks:
                 y_pred = model.predict(benchmark[0])
-            all_y.append(y)
-        all_y = np.mean(all_y, axis=0)
-        plt_data.y = all_y
-        pickle.dump(plt_data, open(fname, 'wb'))
+                y_pred = np.argmax(y_pred, axis=-1)
+                y_true = np.argmax(benchmark[1], axis=-1)
+                matrix += confusion_matrix(y_true, y_pred)
+            all_matrix.append(matrix)
+        pickle.dump([all_matrix, self.model_list], open(fname, 'wb'))
     def load_benchmark_models(self, model_list):
         models = []
         for fname in model_list:
             saved_model = pickle.load(open(fname, 'rb'))
             models.append(saved_model)
         return models
-
     def load_benchmark_data(self, data_list):
         data = []
         for fname in data_list:

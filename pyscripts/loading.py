@@ -288,9 +288,9 @@ if __name__ == "__main__":
     full_y = []
     f_list = [
         "/data/yi/voltVio/analysis/raw/" + "blackscholes2c" + ".gridIR",
-        "/data/yi/voltVio/analysis/raw/" + "bodytrack2c" + ".gridIR"
-        "/data/yi/voltVio/analysis/raw/" + "freqmine2c"+ ".gridIR"
-        "/data/yi/voltVio/analysis/raw/" + "facesim2c"+ ".gridIR"
+        "/data/yi/voltVio/analysis/raw/" + "bodytrack2c" + ".gridIR",
+        "/data/yi/voltVio/analysis/raw/" + "freqmine2c"+ ".gridIR",
+        "/data/yi/voltVio/analysis/raw/" + "facesim2c"+ ".gridIR",
         ]
     #f_list = ["F:\\Yaswan2c\\Yaswan2c.gridIR"]
     for fname in f_list:
