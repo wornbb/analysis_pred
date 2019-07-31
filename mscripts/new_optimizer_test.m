@@ -1,4 +1,5 @@
 
+load("sensor_rank_fig.mat")
 [a, rank_1] = test_lasso_rank_sensors(normed_split, solution_select);
 function [solution, b_norm] = test_lasso_rank_sensors(data,solution)
     quality_factor = 0.8;

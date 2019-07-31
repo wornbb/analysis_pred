@@ -28,8 +28,8 @@ x_test = np.expand_dims(x_test, axis=2)
 print(x_train.shape)
 csv_logger = CSVLogger('training.csv',append=True)
 from keras.layers import Dense,merge, Dropout,Add, LSTM, Bidirectional, BatchNormalization, Input, Permute
-for n in range(25,36):
-    for m in  range(25,36):
+for n in range(25,26):
+    for m in  range(25,226):
         model = Sequential()
         print(len(y_test), sum(y_test))
         model.add(Bidirectional(LSTM(n, kernel_initializer='random_uniform', bias_initializer='zeros', return_sequences=True)))

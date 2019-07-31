@@ -6,7 +6,7 @@ from loading import generate_prediction_data
 from tensorflow.keras.utils import to_categorical
 import os
 if os.name == 'nt':
-      name = "Yaswan2c.gridIR"
+      name = "Yaswan2c_desktop"
       fname = "F:\\Yaswan2c\\Yaswan2c.gridIR"
 else:
       name = input("Give the simulation name: ")

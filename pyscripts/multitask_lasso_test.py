@@ -1,4 +1,4 @@
-from sklearn.linear_model import Lasso
+from sklearn.linear_model import MultiTaskLasso
 from sklearn.cluster import KMeans
 from sklearn.model_selection import GridSearchCV
 import numpy as np
@@ -6,15 +6,14 @@ import pandas as pd
 from sklearn.metrics import make_scorer
 from loading import read_volt_grid
 from sklearn.preprocessing import StandardScaler
-class glsp(Lasso):
+class glsp(MultiTaskLasso):
     def __init__(self, alpha=1.0, fit_intercept=True, normalize=False,
-                 precompute=False, copy_X=True, max_iter=1000,
-                 tol=1e-4, warm_start=False, positive=False,
+                 copy_X=True, max_iter=1000, tol=1e-4, warm_start=False,
                  random_state=None, selection='cyclic'):
         super().__init__(alpha=alpha,fit_intercept=fit_intercept,
-            normalize=normalize, precompute=precompute, copy_X=copy_X,
+            normalize=normalize, copy_X=copy_X,
             max_iter=max_iter, tol=tol, warm_start=warm_start,
-            positive=positive, random_state=random_state,
+            random_state=random_state,
             selection=selection)
     def fit(self, true_y, true_x):
         # when call fit, sklearn always takes the 1st input as x and 2nd input as y.
@@ -66,10 +65,15 @@ if __name__ == "__main__":
     jump = 20
     parameters = {'alpha':np.arange(start, end, jump)}
 
-    ls = glsp(alpha=25/(2*y_train.shape[1]),max_iter=10000,fit_intercept=False,positive=True)
-    ls.fit(y_train, x_train)
+    ls = glsp(alpha=25,max_iter=10000,fit_intercept=False)
+    #ls.fit(y_train, x_train)
+    y_slice = y_train[:, 0]
+    beta = x_train.T * (y_train - x_train)
     yp = ls.predict(x_train)
-    print(np.linalg.norm(yp-y_train,2))
+    #print(np.linalg.norm(yp-y_train,2))
+    print(np.mean(np.mean(yp)))
+    print(np.mean(np.mean(y_train)))
+    print(np.mean(np.mean(yp-y_train)))
     score_correlation = make_scorer(loss_correlation)
     score_sensor_count = make_scorer(loss_sensor_count)
     clf = GridSearchCV(ls, parameters, cv=2, refit= 'correlation', scoring={'correlation':score_correlation, 'count':score_sensor_count})

@@ -1,5 +1,8 @@
+import h5py
 import numpy as np
 import pickle
+from tensorflow.keras.utils import to_categorical
+from tensorflow.keras.models import load_model
 from collections import deque
 def read_volt_grid(file, lines_to_read, start_line = 0):
     """Read .gridIR files and store them in a 2D array
@@ -138,7 +141,8 @@ def read_violation(file, lines_to_read=0, start_line=0, trace=0, thres=4, ref=1,
     with open(file, 'r') as v:
         for i in range(start_line):
             v.readline()
-        buffer = deque()
+        # buffer = deque()
+        buffer = [] # buffer is a queue with length trace
         #fill que
         for i in range(trace-1):
             vline = v.readline()
@@ -147,18 +151,17 @@ def read_violation(file, lines_to_read=0, start_line=0, trace=0, thres=4, ref=1,
                 buffer.append(v_formated)
             else:
                 print("this is a very unlikely situation. Why would there be a blank line in the file?")
-        #for i in range(start_line, start_line + lines_to_read):
-        while lines_to_read and vline:
+            buffer = np.array(buffer)
+        while lines_to_read > 0:
+            if vline == '':
+                break
             lines_to_read -= 1
             vline = v.readline()
             v_formated = np.fromstring(vline, sep='    ', dtype='float')
             if v_formated.size:
-                vios = get_violation(v_formated, prev=np.array(buffer), mode=trace, reverse=reverse)
-                buffer.append(v_formated)
-                if len(buffer) == trace: 
-                    # The length of buffered trace will be n-1. The "-1" was compensated by the most recent voltage point.
-                    # Total length of returned trace will remain n.
-                    buffer.popleft()
+                vios = get_violation(v_formated, prev=buffer, mode=trace, reverse=reverse)
+                buffer = np.roll(buffer, -1, axis=0)
+                buffer[-1,:] = v_formated
                 if vios.size:
                     batch.append(vios)
                     count -= 1
@@ -262,28 +265,56 @@ def generate_prediction_data(file, lines_to_read=0, selected_sensor=[], trace=39
     if norm[counter_index] > 0:
         print("Warning: File ends before enough instances collected. Total counts:", norm[counter_index])
     return (batch, tag)
-
+def load_h5_tag_grid(fname):
+    with h5py.File(fname,'r') as f:
+        data = f["data"].value
+        tag = f["tag"].value
+    max_tag = np.max(tag)
+    # make tag = 2 and tag =1 the same
+    if max_tag > 1.5:
+        tag = np.bitwise_not(tag < 1.5)
+    tag = to_categorical(tag)
+    [x_train, x_test] = np.array_split(data, 2, axis=0)
+    [y_train, y_test] = np.array_split(tag, 2, axis=0)
+    return [x_train, y_train, x_test, y_test]
+def load_frozen_lstm(model_name):
+    sensor_model = load_model(model_name)
+    for layer in sensor_model.layers:
+        layer.trainable = False
+    sensor_model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['categorical_accuracy'])
+    return sensor_model
 if __name__ == "__main__":
+    full_x = []
+    full_y = []
+    f_list = [
+        "/data/yi/voltVio/analysis/raw/" + "blackscholes2c" + ".gridIR",
+        "/data/yi/voltVio/analysis/raw/" + "bodytrack2c" + ".gridIR"
+        "/data/yi/voltVio/analysis/raw/" + "freqmine2c"+ ".gridIR"
+        "/data/yi/voltVio/analysis/raw/" + "facesim2c"+ ".gridIR"
+        ]
+    for fname in f_list:
+        #fname = "C:\\Users\\Yi\\Desktop\\Yaswan2c\\test.gridIR"
+        (vios_data, dim) = read_violation(fname, start_line=200,trace=40)
+        (norm_data, dim) = read_violation(fname, lines_to_read=25, trace=40, count=2000, reverse=True)
+        vios_data = vios_data[4:,:] # striping coordinates
+        norm_data = norm_data[4:,:]
+        # [vios_train, vios_test] = np.array_split(vios_data, 2, axis=1)
+        # [norm_train, norm_test] = np.array_split(norm_data, 2, axis=1)
+
+        yp_len = vios_data.shape[1]
+        yn_len = norm_data.shape[1]
+        y = [1] * yp_len+ [0] * yn_len
+        full_y += y
+        full_x.append(vios_data)
+        full_x.append(norm_data)
+
+    full_x = np.hstack(full_x).T
+    shuffle_index = np.random.shuffle(range(len(full_y)))
+    shuffled_x = full_x[shuffle_index,:]
+    shuffled_x = np.expand_dims(shuffled_x, axis=2)
+    shuffled_y = full_y[shuffle_index]
     
-    fname = "F:\\Yaswan2c\\Yaswan2c.gridIR"
-    #fname = "C:\\Users\\Yi\\Desktop\\Yaswan2c\\test.gridIR"
-    (vios_data, dim) = read_violation(fname, start_line=200,trace=40, lines_to_read=10000)
-    (norm_data, dim) = read_violation(fname, lines_to_read=25, trace=40, count=2000, reverse=True)
-    vios_data = vios_data[4:,:]
-    norm_data = norm_data[4:,:]
-    [vios_train, vios_test] = np.array_split(vios_data, 2, axis=1)
-    [norm_train, norm_test] = np.array_split(norm_data, 2, axis=1)
-
-    yp_train = vios_train.shape[1]
-    yp_test = vios_test.shape[1]
-    yn_train = norm_train.shape[1]
-    yn_test = norm_test.shape[1]
-    print(yp_train,yn_train)
-    y_train = [1] * yp_train + [0] * yn_train
-    y_test = [1] * yp_test + [0] * yn_test
-    x_train = np.hstack((vios_train, norm_train)).T
-    x_test  = np.hstack((vios_test, norm_test)).T
-    x_train = np.expand_dims(x_train, axis=2)
-    x_test = np.expand_dims(x_test, axis=2)
-
-    pickle.dump( [x_train,y_train,x_test,y_test], open( "all_vios.p", "wb" ) )
+    save_fname = "combined_lstm_training.data"
+    with h5py.File(save_fname,"w") as hf:
+        hf.create_dataset("x", data=shuffled_x, dtype = 'float32')
+        hf.create_dataset("y", data=shuffled_y, dtype = 'float32')
