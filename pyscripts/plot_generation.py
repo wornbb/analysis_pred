@@ -13,7 +13,7 @@ class benchmark_factory():
         self.benchmarks = self.load_benchmark_data(data_list)
         self.exp_name = exp_name
     def generate_avg_acc_plt_data(self):
-        fname = self.exp_name + "avg_acc_curve.data"
+        fname = self.exp_name + "avg_metric_curve.data"
         plt_data = {"model_order": self.models, "x": range(len(self.models))}
         all_y = []
         for model in self.models:

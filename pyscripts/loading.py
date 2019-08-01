@@ -308,9 +308,12 @@ if __name__ == "__main__":
         full_y += y
         full_x.append(vios_data)
         full_x.append(norm_data)
-
+    save_fname = "combined_lstm_training.data"
+    with h5py.File(save_fname,"w") as hf:
+        hf.create_dataset("x", data=full_x, dtype = 'float32')
+        hf.create_dataset("y", data=full_y, dtype = 'float32')
     full_x = np.hstack(full_x).T
-    shuffle_index = np.random.shuffle(range(len(full_y)))
+    shuffle_index = np.random.shuffle(np.arange(len(full_y)))
     shuffled_x = full_x[shuffle_index,:]
     shuffled_x = np.expand_dims(shuffled_x, axis=2)
     shuffled_y = full_y[shuffle_index]
