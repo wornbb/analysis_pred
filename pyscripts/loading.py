@@ -313,6 +313,7 @@ if __name__ == "__main__":
     #     hf.create_dataset("x", data=full_x, dtype = 'float32')
     #     hf.create_dataset("y", data=full_y, dtype = 'float32')
     full_x = np.hstack(full_x).T
+    full_y = np.array(full_y)
     shuffle_index = np.arange(len(full_y))
     np.random.shuffle(shuffle_index)
     shuffled_x = full_x[shuffle_index,:]

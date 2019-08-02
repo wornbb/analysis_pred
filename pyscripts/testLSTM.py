@@ -24,6 +24,7 @@ scaled_x = scaler.fit_transform(x[:,:-pred_str,0])
 test_size = 1000
 x_train = scaled_x[:-test_size,:]
 x_test = scaled_x[-test_size:,:]
+y_train = y[:]
 print(x_train.shape)
 csv_logger = CSVLogger('training.csv',append=True)
 from keras.layers import Dense,merge, Dropout,Add, LSTM, Bidirectional, BatchNormalization, Input, Permute
