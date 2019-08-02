@@ -10,21 +10,20 @@ from keras import regularizers
 from keras.callbacks import ModelCheckpoint, CSVLogger
 import keras as keras
 from clr_callback import*
-
-config = tf.ConfigProto()
-config.gpu_options.allow_growth = True
-session = tf.Session(config=config)
+import h5py
 
 fname = "C:\\Users\\Yi\\Desktop\\Yaswan2c\\Yaswan2c.gridIR"
-
-[x_train,y_train,x_test,y_test] = pickle.load(open("all_vios.p","rb"))
+save_fname = "combined_lstm_training.data"
+with h5py.File(save_fname,"r") as hf:
+        x = hf["x"].value
+        y= hf["y"].value
 from sklearn.preprocessing import MinMaxScaler
 scaler = MinMaxScaler(feature_range=(-0.5, 0.5))
-x_train = scaler.fit_transform(x_train[:,:-5,0])
-x_train = np.expand_dims(x_train, axis=2)
-x_test = scaler.fit_transform(x_test[:,:-5,0])
-x_test = np.expand_dims(x_test, axis=2)
-
+pred_str = 5
+scaled_x = scaler.fit_transform(x[:,:-pred_str,0])
+test_size = 1000
+x_train = scaled_x[:-test_size,:]
+x_test = scaled_x[-test_size:,:]
 print(x_train.shape)
 csv_logger = CSVLogger('training.csv',append=True)
 from keras.layers import Dense,merge, Dropout,Add, LSTM, Bidirectional, BatchNormalization, Input, Permute
