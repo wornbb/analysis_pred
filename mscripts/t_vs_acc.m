@@ -11,7 +11,7 @@ Vth = 0.8;
 vioP = 5;
 % training
 % load data
-exps = ["Yaswan2c"];
+exps = ["blackscholes2c"];
 modes = ["base", "pbi"];
 mode = modes(2); 
 batch_size = 50;

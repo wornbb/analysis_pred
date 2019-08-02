@@ -1,6 +1,6 @@
 function data = load_exps(exps, iter, batch_size, root)
     if nargin == 3
-        root = "/data/yi/vioPred/data";
+        root = "/data/yi/voltVio/analysis/raw";
     end    
     % my dirs
     exp_record = fullfile(root, "exp_record.mat");
