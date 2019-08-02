@@ -1,8 +1,7 @@
-function solution = lasso_select_sensors(data,solution)
+function solution = lasso_select_sensors(data,solution, t)
     quality_factor = 0.8;
     n = length(data);
     for k = 1:n
-        t = 25;
         b = batch_lasso_l2(data(k).variable.xbar, data(k).variable.ybar, t);
         b_norm = norms(b);
         best_sensor = max(b_norm);
