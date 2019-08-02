@@ -286,16 +286,22 @@ def load_frozen_lstm(model_name):
 if __name__ == "__main__":
     full_x = []
     full_y = []
-    f_list = [
-        "/data/yi/voltVio/analysis/raw/" + "blackscholes2c" + ".gridIR",
-        "/data/yi/voltVio/analysis/raw/" + "bodytrack2c" + ".gridIR",
-        "/data/yi/voltVio/analysis/raw/" + "freqmine2c"+ ".gridIR",
-        "/data/yi/voltVio/analysis/raw/" + "facesim2c"+ ".gridIR",
-        ]
-    # f_list = ["F:\\Yaswan2c\\Yaswan2c.gridIR"]
+    import os
+    if os.name == 'nt':
+        f_list = ["F:\\Yaswan2c\\Yaswan2c.gridIR"]
+    else:
+        f_list = [
+            "/data/yi/voltVio/analysis/raw/" + "blackscholes2c" + ".gridIR",
+            "/data/yi/voltVio/analysis/raw/" + "bodytrack2c" + ".gridIR",
+            "/data/yi/voltVio/analysis/raw/" + "freqmine2c"+ ".gridIR",
+            "/data/yi/voltVio/analysis/raw/" + "facesim2c"+ ".gridIR",
+            ]
     for fname in f_list:
         #fname = "C:\\Users\\Yi\\Desktop\\Yaswan2c\\test.gridIR"
-        (vios_data, dim) = read_violation(fname, start_line=200,trace=40)
+        if os.name == 'nt':
+            (vios_data, dim) = read_violation(fname, start_line=200,trace=40, lines_to_read=10000)
+        else:
+            (vios_data, dim) = read_violation(fname, start_line=200,trace=40)
         (norm_data, dim) = read_violation(fname, lines_to_read=25, trace=40, count=2000, reverse=True)
         vios_data = vios_data[4:,:] # striping coordinates
         norm_data = norm_data[4:,:]
