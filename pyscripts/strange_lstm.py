@@ -44,11 +44,11 @@ except:
 csv_logger = CSVLogger(log_file, append=True)
 rnn_dropout = 0.4
 from keras.layers import Dense,merge, Dropout,Add, LSTM, Bidirectional, BatchNormalization, Input, Permute
-for m in [10]:
-    for n in range(5,1,-1):
+m = 32
+for s in range(3,6):
+    for n in range(5,50,10):
         inputs = Input(shape=(34,1))
         #shuffled = Permute((2,1), input_shape=(34,1))(inputs)
-        s = 2
         for rnn in range(s):
             if rnn == 0:
                 lstm = Bidirectional(LSTM(n, recurrent_dropout=rnn_dropout, dropout=rnn_dropout, return_sequences=True))(inputs)
@@ -60,8 +60,8 @@ for m in [10]:
                 node = Bidirectional(LSTM(n,recurrent_dropout=rnn_dropout, dropout=rnn_dropout,))(node)
                 #node = Add()([node, lstm])
         selu_ini = keras.initializers.RandomNormal(mean=0.0, stddev=1/40, seed=None)
-        # node = Dense(m, activation='selu', kernel_initializer=selu_ini)(node)
-        # node = BatchNormalization()(node)
+        node = Dense(m, activation='selu', kernel_initializer=selu_ini)(node)
+        node = BatchNormalization()(node)
         # node = Dense(m, activation='selu', kernel_initializer=selu_ini)(node)
         # node = BatchNormalization()(node)
         prediction = Dense(1, activation='sigmoid', kernel_initializer='random_uniform', bias_initializer='zeros')(node)
@@ -69,7 +69,7 @@ for m in [10]:
         model.compile(loss='binary_crossentropy', optimizer='rmsprop', metrics=['accuracy'])
         model.summary()
         print('Train...')
-        filepath = "residual.biLSTM." + str(n) + ".{epoch:02d}-{val_acc:.3f}-{val_loss:.3f}.hdf5"
+        filepath = "residual." + str(s) + ".biLSTM." + str(n) + ".{epoch:02d}-{val_acc:.3f}-{val_loss:.3f}.hdf5"
         checkpoint = ModelCheckpoint(filepath, monitor='val_acc',save_best_only=True, verbose=1, mode='max')
         clr = CyclicLR(base_lr=0.05, max_lr=0.15, mode='triangular2')
         batch_size = 64
@@ -77,6 +77,6 @@ for m in [10]:
         model.fit(x_train, np.array(y_train),
                 batch_size=batch_size,
                 validation_data=(x_test[::400,:,:],np.array(y_test[::400])),
-                epochs=25,
+                epochs=15,
                 callbacks=callbacks,
                 verbose=1)
