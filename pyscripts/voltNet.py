@@ -10,8 +10,13 @@ from tensorflow.keras.optimizers import *
 from tensorflow.keras.layers import TimeDistributed, Input, Dense, BatchNormalization, Flatten
 from loading import *
 from tensorflow_model_optimization.sparsity import keras as sparsity
-fname = "./balanced_gird_sensor.facesim2c.h5"
-[x_train, y_train, x_test, y_test] = load_h5_tag_grid(fname)
+
+import os
+fname = 'combined_2c_gird_probability.h5'
+with h5py.File('balanced_gird_sensor.Yaswan2c_desktop.h5','r') as f:
+      data = f["x"].value
+      tag = f["y"].value
+#[x_train, y_train, x_test, y_test] = load_h5_grid(fname)
 model_name = 'residual.3.biLSTM.45.15-0.997-0.008.hdf5'
 sensor_model = load_frozen_lstm(model_name)
 end_step = 3500

@@ -37,7 +37,7 @@ def read_volt_grid(file, lines_to_read, start_line = 0):
     if batch:
         batch = np.column_stack(batch)
     return batch
-def get_violation(data, occurrence=np.array([],dtype=np.double), ref=1, thres=4, prev=[], mode=0, reverse=False)->np.ndarray:
+def get_violation(data, occurrence=np.array([],dtype=np.double), ref=1, thres=4, prev=[], mode=0, reverse=False, return_mask=False)->np.ndarray:
     """Get the coordination of voltage violation node from loaded grid array.
     
     Arguments:
@@ -102,7 +102,10 @@ def get_violation(data, occurrence=np.array([],dtype=np.double), ref=1, thres=4,
         if not current_report[0].size:
             new_occurrence =  np.array([],dtype=np.double)
         occurrence = new_occurrence
-    return occurrence
+    if return_mask:
+        return [occurrence, vios]
+    else:
+        return occurrence
 
 def read_violation(file, lines_to_read=0, start_line=0, trace=0, thres=4, ref=1, count=0, reverse=False):
     """Read the gridIR file but only return the occurrence when there is a violation.
@@ -200,8 +203,10 @@ def generate_prediction_data(file, lines_to_read=0, selected_sensor=[], trace=39
     if not lines_to_read:
         lines_to_read = np.inf
     count = 0
-    batch = []
-    tag = []
+    grid_batch = []
+    lstm_batch = []
+    grid_tag = []
+    lstm_tag = []
     with open(file, 'r') as v:
 
         buffer = [] # buffer is a queue with length trace
@@ -233,42 +238,66 @@ def generate_prediction_data(file, lines_to_read=0, selected_sensor=[], trace=39
 
             if v_formated.size:
                 if not global_vio:
-                    local_vios = get_violation(v_formated[selected_sensor], prev=buffer, mode=trace, ref=ref, thres=thres)
+                    [local_vios, vio_mask] = get_violation(v_formated[selected_sensor], prev=buffer, mode=trace, ref=ref, thres=thres, return_mask=True)
                 else:
-                    vios = get_violation(v_formated, prev=buffer, mode=trace, ref=ref, thres=thres)
+                    [vios, vio_mask] = get_violation(v_formated, prev=buffer, mode=trace, ref=ref, thres=thres, return_mask=True)
                     
                 # update buffer like a queue. queue is too slow for other operation
                 buffer = np.roll(buffer, -1, axis=0)
                 buffer[-1,:] = v_formated
                 # logic to process the grid
                 if vios.size and not local_vios.size: # violation happens globally but not locally
+                    # update counter
                     norm[counter_index] += 1
                     norm[timer_index] += trace + pred_str - 1
-                    batch.append(buffer[:trace-pred_str, selected_sensor].T)
-                    tag.append(1)
+                    # register grid data
+                    grid_batch.append(buffer[:trace-pred_str, selected_sensor].T)
+                    grid_tag.append(2)
+                    # randomly select strictly non-violation location
+                    shuffle_buffer = np.copy(vio_mask)
+                    np.random.shuffle(shuffle_buffer)
+                    non_vio = np.bitwise_and(shuffle_buffer, np.bitwise_not(vio_mask))
+                    # register lstm data
+                    lstm_batch.append(buffer[:trace-pred_str, vio_mask].T)
+                    lstm_tag += [1] * np.sum(vio_mask)
+                    lstm_batch.append(buffer[:trace-pred_str, non_vio].T)
+                    lstm_tag += [0] * np.sum(non_vio)
+
                 elif local_vios.size: # local violation
+                    # update counter
                     norm[counter_index] += 1
                     norm[timer_index] += trace + pred_str - 1
-                    batch.append(buffer[:trace-pred_str, selected_sensor].T)
-                    tag.append(2)
+                    # register grid data
+                    grid_batch.append(buffer[:trace-pred_str, selected_sensor].T)
+                    grid_tag.append(1)                    
+                    # randomly select strictly non-violation location
+                    shuffle_buffer = np.copy(vio_mask)
+                    np.random.shuffle(shuffle_buffer)
+                    non_vio = np.bitwise_and(shuffle_buffer, np.bitwise_not(vio_mask))
+                    # register lstm data
+                    lstm_batch.append(buffer[:trace-pred_str, vio_mask].T)
+                    lstm_tag += [1] * np.sum(vio_mask)
+                    lstm_batch.append(buffer[:trace-pred_str, non_vio].T)
+                    lstm_tag += [0] * np.sum(non_vio)
                 else: # normal
                     if norm[counter_index] != 0: # only update timer if there is a counter.
                         norm[timer_index] -= 1
                 if norm[timer_index] % (trace + pred_str)==0 and norm[counter_index] != 0:
                     norm[counter_index] -= 1
-                    batch.append(buffer[:trace-pred_str, selected_sensor].T)
-                    tag.append(0)
-    if batch:
-        batch = np.stack(batch)
+                    grid_batch.append(buffer[:trace-pred_str, selected_sensor].T)
+                    grid_tag.append(0)
+    lstm_batch = np.vstack(lstm_batch)
+    if grid_batch:
+        grid_batch = np.stack(grid_batch)
     else:
         print("Error, no violation found!!!")
     if norm[counter_index] > 0:
         print("Warning: File ends before enough instances collected. Total counts:", norm[counter_index])
-    return (batch, tag)
-def load_h5_tag_grid(fname):
+    return (lstm_batch, lstm_tag, grid_batch, grid_tag)
+def load_h5_grid(fname):
     with h5py.File(fname,'r') as f:
-        data = f["data"].value
-        tag = f["tag"].value
+        data = f["x"].value
+        tag = f["y"].value
     max_tag = np.max(tag)
     # make tag = 2 and tag =1 the same
     if max_tag > 1.5:
@@ -299,7 +328,7 @@ if __name__ == "__main__":
     for fname in f_list:
         #fname = "C:\\Users\\Yi\\Desktop\\Yaswan2c\\test.gridIR"
         if os.name == 'nt':
-            (vios_data, dim) = read_violation(fname, start_line=200,trace=40, lines_to_read=10000)
+            (vios_data, dim) = read_violation(fname, start_line=200,trace=40, lines_to_read=100000)
         else:
             (vios_data, dim) = read_violation(fname, start_line=200,trace=40)
         (norm_data, dim) = read_violation(fname, lines_to_read=25, trace=40, count=2000, reverse=True)
@@ -326,7 +355,11 @@ if __name__ == "__main__":
     shuffled_x = np.expand_dims(shuffled_x, axis=2)
     shuffled_y = full_y[shuffle_index]
     
-    save_fname = "combined_lstm_training.data"
+    # save_fname = "combined_lstm_training.data"
+    # with h5py.File(save_fname,"w") as hf:
+    #     hf.create_dataset("x", data=shuffled_x, dtype = 'float32')
+    #     hf.create_dataset("y", data=shuffled_y, dtype = 'float32')
+    save_fname = "lstm_test.data"
     with h5py.File(save_fname,"w") as hf:
         hf.create_dataset("x", data=shuffled_x, dtype = 'float32')
         hf.create_dataset("y", data=shuffled_y, dtype = 'float32')

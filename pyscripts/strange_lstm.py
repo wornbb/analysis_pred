@@ -13,10 +13,35 @@ from clr_callback import*
 import h5py
 import os
 fname = "C:\\Users\\Yi\\Desktop\\Yaswan2c\\Yaswan2c.gridIR"
-save_fname = "combined_lstm_training.data"
-with h5py.File(save_fname,"r") as hf:
-        x = hf["x"].value
-        y= hf["y"].value
+
+f_list = [
+"balanced_gird_sensor." + "blackscholes2c" + ".h5",
+"balanced_gird_sensor." + "bodytrack2c" + ".h5",
+"balanced_gird_sensor." + "freqmine2c"+ ".h5",
+"balanced_gird_sensor." + "facesim2c"+ ".h5",
+]
+with h5py.File(f_list[0], 'r') as f:
+      x_shape = f["data"].shape
+      x_type = f["data"].dtype
+      y_type = f["tag"].dtype
+
+margins = np.array([1 + 4/100, 1 - 4/100]) * 1
+with h5py.File("lstm_grid_batch_train.h5", 'w') as hf:
+    x = hf.create_dataset('x', shape=(1, x_shape[1], 1), maxshape=(None, x_shape[1], 1))
+    y = hf.create_dataset('y', shape=(1,), maxshape=(None,))
+    for fname in f_list:
+        with h5py.File(fname, 'r') as data:
+            girds = data['x'][()]
+        for index in range(girds.shape[0]):
+            higher = girds[index,:,:,0] > margins[0]
+            lower = gird[index,:,:,0] < margins[1]
+            vios = np.bitwise_or(higher, lower)
+            total_vios = np.sum(vios)
+            if total_vios >= 0:
+                vio_traces = grid[]
+# with h5py.File(save_fname,"r") as hf:
+#         x = hf["x"].value
+#         y= hf["y"].value
 # dirty fixing
 x = np.squeeze(x, axis=(0,2))
 y = y.flatten().astype('int')

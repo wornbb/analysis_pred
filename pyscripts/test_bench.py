@@ -10,6 +10,7 @@ with h5py.File(save_fname,"r") as hf:
         y= hf["y"].value
 # dirty fixing
 x = np.squeeze(x, axis=(0,2))
+# x = np.squeeze(x, axis=(2))
 y = y.flatten().astype('int')
 shuffle_index = np.arange(y.shape[0])
 np.random.shuffle(shuffle_index)

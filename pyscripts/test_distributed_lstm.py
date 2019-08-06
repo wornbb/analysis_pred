@@ -9,22 +9,51 @@ from tensorflow.keras.callbacks import ModelCheckpoint, CSVLogger
 from clr_callback import*
 from tensorflow_model_optimization.sparsity import keras as sparsity
 from tensorflow.keras.optimizers import *
-with h5py.File('balanced_grid_sensor.h5','r') as f:
-      data = f["data"].value
-      tag = f["tag"].value
 
-sensor_model = load_model('residual.3.biLSTM.45.15-0.997-0.008.hdf5')
-
-x = np.ones((data.shape[0],data.shape[1]))
-for sample in range(data.shape[0]):
-    x[sample,:] = sensor_model.predict(data[sample,:,6:-5,0:1], batch_size=data.shape[1])[:,0]
-
-with h5py.File('./batch_lstm_result.h5', 'w') as hf:
-      hf.create_dataset("x", data=x, dtype = 'float32')
-      hf.create_dataset("tag", data=tag, dtype = 'float32')
-# with h5py.File('./batch_lstm_result.h5', 'r') as f:
-#       x = f["x"].value
-#       tag = f["tag"].value
+import os
+f_list = [
+"balanced_gird_sensor." + "blackscholes2c" + ".h5",
+"balanced_gird_sensor." + "bodytrack2c" + ".h5",
+"balanced_gird_sensor." + "freqmine2c"+ ".h5",
+"balanced_gird_sensor." + "facesim2c"+ ".h5",
+]
+f_list = [r"balanced_gird_sensor.Yaswan2c_desktop.h5"]
+# with h5py.File(f_list[0], 'r') as f:
+#       x_shape = f["data"].shape
+#       x_type = f["data"].dtype
+#       y_type = f["tag"].dtype
+with h5py.File(f_list[0], 'r') as f:
+      x_shape = f["x"].shape
+      x_type = f["x"].dtype
+      y_type = f["y"].dtype
+print(x_shape)
+sensor_model = load_model(r'residual.3.biLSTM.45.15-0.997-0.008.hdf5')
+with h5py.File(r"combined_2c_gird_probability2.h5", 'w') as f:
+      maxshape = (None, x_shape[1])
+      probs = f.create_dataset('x', shape=(1, x_shape[1]), maxshape=maxshape, dtype=x_type)
+      y = f.create_dataset('y', shape=(1,), maxshape=(None,), dtype=y_type)
+      sample_count = 0
+      for fname in f_list:
+            # load unprocessed data
+            with h5py.File(fname, 'r') as dataset:
+                  grid_trace_x = dataset["x"][:]
+                  classes = dataset["y"][:]
+            # resize saving space
+            new_sample_count = sample_count + classes.shape[0]
+            probs.resize(new_sample_count, axis=0)
+            y.resize(new_sample_count, axis=0)
+            # writing
+            y[sample_count:new_sample_count] = classes
+            for sample in range(grid_trace_x.shape[0]):
+                  probs[sample_count + sample, :] = sensor_model.predict(grid_trace_x[sample,:,:,0:1], batch_size=grid_trace_x.shape[1])[:,0]
+            sample_count = new_sample_count
+            print(fname)
+with h5py.File('combined_2c_gird_probability2.h5', 'r') as f:
+      x = f["x"][()]
+      tag = f["y"][()]
+# with h5py.File(f_list[0], 'r') as dataset:
+#                   grid_trace_x = dataset["data"][:]
+#                   classes = dataset["tag"][:]
 tag = np.bitwise_not(tag < 1.5)
 tag = to_categorical(tag)
 [x_train, x_test] = np.array_split(x, 2, axis=0)
@@ -39,8 +68,9 @@ pruning_params = {
 }
 from tensorflow.keras.layers import TimeDistributed, Input, Dense, BatchNormalization, Flatten
 inputs = Input(shape=(x.shape[1]))
-outputs = sparsity.prune_low_magnitude(Dense(2, activation='softmax'), **pruning_params)(inputs)
-
+#outputs = sparsity.prune_low_magnitude(Dense(76, activation='sigmoid'), **pruning_params)(inputs)
+#outputs = BatchNormalization()(outputs)
+outputs = Dense(2, activation='softmax')(inputs)
 # node = Dense(76, activation='selu')(inputs)
 # node = BatchNormalization()(outputs)
 # outputs = Dense(2, activation='softmax')(outputs)
@@ -50,6 +80,7 @@ ad = tf.keras.optimizers.Adam(lr=0.1, beta_1=0.9, beta_2=0.999, epsilon=None, de
 logdir = 'prune.log'
 
 model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['categorical_accuracy'])
+#model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['categorical_accuracy'])
 model.fit(x_train[:,:], y_train[:,:],
       validation_data=(x_test[:,:],y_test[:,:]),
       batch_size=1,
