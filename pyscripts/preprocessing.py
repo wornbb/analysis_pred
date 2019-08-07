@@ -28,20 +28,23 @@ class preprocessor():
         self.load_samples = self.load_x.shape[0]
         self.trace_len = self.load_x.shape[2]
         self.grid_size = self.load_x.shape[1]
-        with h5py.File(self.save_fname, 'r') as f:
-            self.save_x = f.create_dataset_like("x", self.load_x)
+        with h5py.File(self.save_fname, 'w') as f:
+            self.save_x = f.create_dataset("x", shape=self.load_x.shape)
             self.save_y = f.create_dataset("y",data=self.load_y)
             for sample in range(self.load_samples):
                 self.save_x[sample,:,:,0] = self.scaler.fit_transform(self.load_x[sample,:,:,0])
 
 if __name__ == "__main__":
-    grid_processor = preprocessor('VoltNet_2c.h5','Scaled_VoltNet_2c.h5')
-    grid_processor.scale_grid_trace()
-    sensor_model = load_model(r'residual.3.biLSTM.45.15-0.997-0.008.hdf5')
-    with h5py.File('Scaled_VoltNet_2c.h5','r') as f:
+    load_fname = "/media/yi/yi_final_resort/VoltNet_2c.h5"
+    save_fname = "/media/yi/yi_final_resort/Scaled_VoltNet_2c.h5"
+    #grid_processor = preprocessor(load_fname,save_fname)
+    #grid_processor.scale_grid_trace()
+    sensor_model = load_model(r'residual.3.biLSTM.45.03-0.836-0.393.hdf5')
+    with h5py.File(save_fname,'r') as f:
         x = f["x"][()]
     for node in range(100):
-        pred = sensor_model.predict(x[0,node,:,0])
+        pred = sensor_model.predict(x[0,node:node+1,:,0:1])
+        print(pred)
 # f_list = [r"balanced_gird_sensor.Yaswan2c_desktop.h5"]
 # with h5py.File(f_list[0], 'r') as f:
 #       x_shape = f["x"].shape
