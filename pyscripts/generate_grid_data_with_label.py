@@ -12,9 +12,6 @@ if os.name == 'nt':
       lstm_save = "lstm_2c.h5"
       net_save = "VoltNet_2c.h5"
 else:
-      #name = input("Give the simulation name: ")
-      fname = "/data/yi/voltVio/analysis/raw/" + name + ".gridIR"
-      #print("loading " + fname)
       f_list = [
       "/data/yi/voltVio/analysis/raw/" + "blackscholes2c" + ".gridIR",
       "/data/yi/voltVio/analysis/raw/" + "bodytrack2c" + ".gridIR",
@@ -48,19 +45,3 @@ with h5py.File(lstm_save, 'w') as lstmF:
                   netY[grid_samples:] = gird_tag
                   lstm_samples = new_lstm_samples
                   grid_samples = new_grid_samples
-
-
-
-# print("Loading complete")
-# from sklearn.preprocessing import MinMaxScaler
-# scaler = MinMaxScaler(feature_range=(-0.5, 0.5))
-# for instance in range(data.shape[1]):
-#       piece = data[:,instance,:]
-#       data[:,instance,:] = scaler.fit_transform(piece)
-# data = np.expand_dims(data, axis=-1)
-
-# save_fname = "balanced_gird_sensor." + name + ".h5"
-# print("Saving to " + save_fname)
-# with h5py.File(save_fname,"w") as hf:
-#       hf.create_dataset("x", data=data, dtype = 'float32')
-#       hf.create_dataset("y", data=tag, dtype = 'float32')
