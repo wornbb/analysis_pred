@@ -35,17 +35,17 @@ with h5py.File(lstm_save, 'w') as lstmF:
             with h5py.File(sampled_net_save, 'w') as netF:
                   netX = netF.create_dataset('x', shape=(1, grid_size, 34, 1), maxshape=(None, grid_size, 34, 1))
                   netY = netF.create_dataset('y', shape=(1,), maxshape=(None,))
-            for fname in f_list:
-                  [lstm_data, lstm_tag, grid_data, gird_tag] = generate_prediction_data(fname, selected_sensor='all',trace=39, ref=1, pred_str=5, thres=4, balance=balance)
-                  new_lstm_samples = lstm_samples + lstm_data.shape[0]
-                  new_grid_samples = grid_samples + grid_data.shape[0]
-                  lstmX.resize(new_lstm_samples, axis=0)
-                  lstmY.resize(new_lstm_samples, axis=0)
-                  netX.resize(new_grid_samples, axis=0)
-                  netY.resize(new_grid_samples, axis=0)
-                  lstmX[lstm_samples:,:,0] = lstm_data
-                  lstmY[lstm_samples:] = lstm_tag
-                  netX[grid_samples:,:,:,0] = grid_data
-                  netY[grid_samples:] = gird_tag
-                  lstm_samples = new_lstm_samples
-                  grid_samples = new_grid_samples
+                  for fname in f_list:
+                        [lstm_data, lstm_tag, grid_data, gird_tag] = generate_prediction_data(fname, selected_sensor='all',trace=39, ref=1, pred_str=5, thres=4, balance=balance)
+                        new_lstm_samples = lstm_samples + lstm_data.shape[0]
+                        new_grid_samples = grid_samples + grid_data.shape[0]
+                        lstmX.resize(new_lstm_samples, axis=0)
+                        lstmY.resize(new_lstm_samples, axis=0)
+                        netX.resize(new_grid_samples, axis=0)
+                        netY.resize(new_grid_samples, axis=0)
+                        lstmX[lstm_samples:,:,0] = lstm_data
+                        lstmY[lstm_samples:] = lstm_tag
+                        netX[grid_samples:,:,:,0] = grid_data
+                        netY[grid_samples:] = gird_tag
+                        lstm_samples = new_lstm_samples
+                        grid_samples = new_grid_samples

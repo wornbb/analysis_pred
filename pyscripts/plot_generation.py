@@ -58,11 +58,11 @@ class benchmark_factory():
             all_matrix.append(matrix)
         pickle.dump([all_matrix, self.model_list], open(fname, 'wb'))
     def load_benchmark_models(self, model_list):
-        models = []
-        for fname in model_list:
-            saved_model = pickle.load(open(fname, 'rb'))
-            models.append(saved_model)
-        return models
+        #self.models = []
+        #for fname in model_list:
+        saved_model = pickle.load(open(fname, 'rb'))
+        self.models= saved_model
+        #return self.models
     def load_benchmark_data(self, data_list):
         data = []
         for fname in data_list:
