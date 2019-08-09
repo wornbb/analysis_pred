@@ -31,7 +31,7 @@ with h5py.File(lstm_save, 'w') as lstmF:
 
       balance_list = [0.3, 0.25, 0.15, 0.1]
       for balance in balance_list:
-            sampled_net_save = str(balance) + "." + net_save
+            sampled_net_save =  net_save + "." + str(balance)
             with h5py.File(sampled_net_save, 'w') as netF:
                   netX = netF.create_dataset('x', shape=(1, grid_size, 34, 1), maxshape=(None, grid_size, 34, 1))
                   netY = netF.create_dataset('y', shape=(1,), maxshape=(None,))
