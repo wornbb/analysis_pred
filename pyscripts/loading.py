@@ -176,7 +176,9 @@ def read_violation(file, lines_to_read=0, start_line=0, trace=0, thres=4, ref=1,
     if count > 0:
         print("Warning: File ends before enough instances collected. Total counts:", total - count)
     return (batch, dim)
-def generate_prediction_data(file, lines_to_read=0, selected_sensor=[], trace=39, pred_str=5, thres=4, ref=1, global_vio=True, balance=0.5):
+def generate_prediction_data(file, lines_to_read=0, selected_sensor=[], 
+                            trace=39, pred_str=5, thres=4, ref=1, global_vio=True, balance=0.5,
+                            grid_trigger=True, lstm_trigger=True):
     """Generate the voltage trace only at selected sensors. Generated trace batch will be balanced with violaions and normal.
 
     Arguments:
@@ -251,33 +253,37 @@ def generate_prediction_data(file, lines_to_read=0, selected_sensor=[], trace=39
                     norm[counter_index] += 1
                     norm[timer_index] += trace + pred_str - 1
                     # register grid data
-                    grid_batch.append(buffer[:trace-pred_str, selected_sensor].T)
-                    grid_tag.append(2)
+                    if grid_trigger:
+                        grid_batch.append(buffer[:trace-pred_str, selected_sensor].T)
+                        grid_tag.append(2)
                     # randomly select strictly non-violation location
                     # shuffle_buffer = np.copy(vio_mask)
                     # np.random.shuffle(shuffle_buffer)
                     # non_vio = np.bitwise_and(shuffle_buffer, np.bitwise_not(vio_mask))
-                    non_vio = select_other_nodes(vio_mask, balance=balance)
+                    if lstm_trigger:
+                        non_vio = select_other_nodes(vio_mask, balance=balance)
                     # register lstm data
-                    lstm_batch.append(buffer[:trace-pred_str, vio_mask].T)
-                    lstm_tag += [1] * np.sum(vio_mask)
-                    lstm_batch.append(buffer[:trace-pred_str, non_vio].T)
-                    lstm_tag += [0] * np.sum(non_vio)
+                        lstm_batch.append(buffer[:trace-pred_str, vio_mask].T)
+                        lstm_tag += [1] * np.sum(vio_mask)
+                        lstm_batch.append(buffer[:trace-pred_str, non_vio].T)
+                        lstm_tag += [0] * np.sum(non_vio)
 
                 elif local_vios.size: # local violation
                     # update counter
                     norm[counter_index] += 1
                     norm[timer_index] += trace + pred_str - 1
                     # register grid data
-                    grid_batch.append(buffer[:trace-pred_str, selected_sensor].T)
-                    grid_tag.append(1)                    
+                    if grid_trigger:
+                        grid_batch.append(buffer[:trace-pred_str, selected_sensor].T)
+                        grid_tag.append(1)                    
                     # randomly select strictly non-violation location
-                    non_vio = select_other_nodes(vio_mask, balance=balance)
-                    # register lstm data
-                    lstm_batch.append(buffer[:trace-pred_str, vio_mask].T)
-                    lstm_tag += [1] * np.sum(vio_mask)
-                    lstm_batch.append(buffer[:trace-pred_str, non_vio].T)
-                    lstm_tag += [0] * np.sum(non_vio)
+                    if lstm_trigger:
+                        non_vio = select_other_nodes(vio_mask, balance=balance)
+                        # register lstm data
+                        lstm_batch.append(buffer[:trace-pred_str, vio_mask].T)
+                        lstm_tag += [1] * np.sum(vio_mask)
+                        lstm_batch.append(buffer[:trace-pred_str, non_vio].T)
+                        lstm_tag += [0] * np.sum(non_vio)
                 else: # normal
                     if norm[counter_index] != 0: # only update timer if there is a counter.
                         norm[timer_index] -= 1

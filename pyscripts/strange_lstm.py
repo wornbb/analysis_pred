@@ -47,7 +47,7 @@ rnn_dropout = 0.4
 from keras.layers import Dense,merge, Dropout,Add, LSTM, Bidirectional, BatchNormalization, Input, Permute
 m = 32
 for s in range(4,5):
-    for n in range(60,61,10):
+    for n in range(45,46,10):
         inputs = Input(shape=(34,1))
         #shuffled = Permute((2,1), input_shape=(34,1))(inputs)
         for rnn in range(s):
