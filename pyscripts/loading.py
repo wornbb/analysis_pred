@@ -176,7 +176,7 @@ def read_violation(file, lines_to_read=0, start_line=0, trace=0, thres=4, ref=1,
     if count > 0:
         print("Warning: File ends before enough instances collected. Total counts:", total - count)
     return (batch, dim)
-def generate_prediction_data(file, lines_to_read=0, selected_sensor=[], trace=39, pred_str=5, thres=4, ref=1, global_vio=True):
+def generate_prediction_data(file, lines_to_read=0, selected_sensor=[], trace=39, pred_str=5, thres=4, ref=1, global_vio=True, balance=0.5):
     """Generate the voltage trace only at selected sensors. Generated trace batch will be balanced with violaions and normal.
 
     Arguments:
@@ -254,9 +254,10 @@ def generate_prediction_data(file, lines_to_read=0, selected_sensor=[], trace=39
                     grid_batch.append(buffer[:trace-pred_str, selected_sensor].T)
                     grid_tag.append(2)
                     # randomly select strictly non-violation location
-                    shuffle_buffer = np.copy(vio_mask)
-                    np.random.shuffle(shuffle_buffer)
-                    non_vio = np.bitwise_and(shuffle_buffer, np.bitwise_not(vio_mask))
+                    # shuffle_buffer = np.copy(vio_mask)
+                    # np.random.shuffle(shuffle_buffer)
+                    # non_vio = np.bitwise_and(shuffle_buffer, np.bitwise_not(vio_mask))
+                    non_vio = select_other_nodes(vio_mask, balance=balance)
                     # register lstm data
                     lstm_batch.append(buffer[:trace-pred_str, vio_mask].T)
                     lstm_tag += [1] * np.sum(vio_mask)
@@ -271,9 +272,7 @@ def generate_prediction_data(file, lines_to_read=0, selected_sensor=[], trace=39
                     grid_batch.append(buffer[:trace-pred_str, selected_sensor].T)
                     grid_tag.append(1)                    
                     # randomly select strictly non-violation location
-                    shuffle_buffer = np.copy(vio_mask)
-                    np.random.shuffle(shuffle_buffer)
-                    non_vio = np.bitwise_and(shuffle_buffer, np.bitwise_not(vio_mask))
+                    non_vio = select_other_nodes(vio_mask, balance=balance)
                     # register lstm data
                     lstm_batch.append(buffer[:trace-pred_str, vio_mask].T)
                     lstm_tag += [1] * np.sum(vio_mask)
@@ -312,6 +311,18 @@ def load_frozen_lstm(model_name):
         layer.trainable = False
     sensor_model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['categorical_accuracy'])
     return sensor_model
+def select_other_nodes(selected_nodes, balance=0.5):
+    total_positive = np.sum(selected_nodes)
+    total_length = np.size(selected_nodes)
+    multiplier = int(1 / balance)
+    if total_positive * multiplier <= total_length:
+        shuffle_buffer = [1] * total_positive * multiplier + [0] * (total_length - total_positive * multiplier)
+    else:
+        raise ValueError("multiplier: ", multiplier ," too big")
+    shuffle_buffer = np.array(shuffle_buffer)
+    np.random.shuffle(shuffle_buffer)
+    other_nodes = np.bitwise_and(shuffle_buffer, np.bitwise_not(selected_nodes))
+    return other_nodes
 if __name__ == "__main__":
     full_x = []
     full_y = []

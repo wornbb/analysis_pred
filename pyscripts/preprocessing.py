@@ -33,7 +33,18 @@ class preprocessor():
             self.save_y = f.create_dataset("y",data=self.load_y)
             for sample in range(self.load_samples):
                 self.save_x[sample,:,:,0] = self.scaler.fit_transform(self.load_x[sample,:,:,0])
-
+    def sacle_lstm(self):
+        x = np.squeeze(x, axis=(2))
+        y = y.flatten().astype('int')
+        shuffle_index = np.arange(y.shape[0])
+        np.random.shuffle(shuffle_index)
+        x = x[shuffle_index,:]
+        y = y[shuffle_index]
+        scaled_x = self.scaler.fit_transform(x[:,:])
+        scaled_x = np.expand_dims(scaled_x, axis=2)
+        with h5py.File(self.save_fname, 'w') as f:
+            self.save_x = f.create_dataset("x", data=scaled_x)
+            self.save_y = f.create_dataset("y", data=y)
 if __name__ == "__main__":
     load_fname = "/media/yi/yi_final_resort/VoltNet_2c.h5"
     save_fname = "/media/yi/yi_final_resort/Scaled_VoltNet_2c.h5"

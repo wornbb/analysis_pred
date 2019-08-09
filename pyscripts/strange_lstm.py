@@ -46,8 +46,8 @@ csv_logger = CSVLogger(log_file, append=True)
 rnn_dropout = 0.4
 from keras.layers import Dense,merge, Dropout,Add, LSTM, Bidirectional, BatchNormalization, Input, Permute
 m = 32
-for s in range(3,6):
-    for n in range(25,50,10):
+for s in range(4,5):
+    for n in range(50,100,10):
         inputs = Input(shape=(34,1))
         #shuffled = Permute((2,1), input_shape=(34,1))(inputs)
         for rnn in range(s):
@@ -77,7 +77,7 @@ for s in range(3,6):
         callbacks = [checkpoint, csv_logger]
         model.fit(x_train, np.array(y_train),
                 batch_size=batch_size,
-                validation_data=(x_test[::400,:,:],np.array(y_test[::400])),
+                validation_data=(x_test[::401,:,:],np.array(y_test[::401])),
                 epochs=8,
                 callbacks=callbacks,
                 verbose=1)
