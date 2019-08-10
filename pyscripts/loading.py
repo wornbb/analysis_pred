@@ -367,6 +367,7 @@ class training_data_factory():
             norm_mask = self.select_other_nodes(vio_mask)
             vio_count = np.sum(vio_mask)
             norm_count = np.sum(norm_mask)
+            print(norm_count)
             new_lstm_count = self.lstm_count + vio_count + norm_count
             self.lstmX.resize(new_lstm_count, axis=0)
             self.lstmY.resize(new_lstm_count, axis=0)
