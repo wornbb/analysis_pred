@@ -345,7 +345,7 @@ class training_data_factory():
         while self.lines_to_read > 0:
             self.lines_to_read -= 1
             line = self.read_line(lf)
-            if line.size: # eof
+            if not line.size: # eof
                 print("eof")
                 break
             [vios, vio_mask] = get_violation(line, prev=buffer, mode=self.trace, ref=self.ref, thres=self.thres, return_mask=True)
