@@ -367,11 +367,7 @@ class training_data_factory():
             norm_mask = self.select_other_nodes(vio_mask)
             vio_count = np.sum(vio_mask)
             norm_count = np.sum(norm_mask)
-            print(norm_count)
-            print(vio_count)
-            print(self.lstm_count)
             new_lstm_count = self.lstm_count + vio_count + norm_count
-            print(new_lstm_count)
             self.lstmX.resize(new_lstm_count, axis=0)
             self.lstmY.resize(new_lstm_count, axis=0)
             self.lstmX[self.lstm_count:self.lstm_count+vio_count,:,0] = buffer[:self.trace-self.pred_str, vio_mask].T
@@ -394,7 +390,7 @@ class training_data_factory():
             shuffle_buffer = [1] * total_positive * multiplier + [0] * (total_length - total_positive * multiplier)
         else:
             raise ValueError("multiplier: ", multiplier ," too big")
-        shuffle_buffer = np.array(shuffle_buffer)
+        shuffle_buffer = np.array(shuffle_buffer, dtype=bool)
         np.random.shuffle(shuffle_buffer)
         norm_mask = np.bitwise_and(shuffle_buffer, np.bitwise_not(vio_mask))
         return norm_mask
