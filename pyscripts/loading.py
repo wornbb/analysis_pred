@@ -176,129 +176,129 @@ def read_violation(file, lines_to_read=0, start_line=0, trace=0, thres=4, ref=1,
     if count > 0:
         print("Warning: File ends before enough instances collected. Total counts:", total - count)
     return (batch, dim)
-# def generate_prediction_data(file, lines_to_read=0, selected_sensor=[], 
-#                             trace=39, pred_str=5, thres=4, ref=1, global_vio=True, balance=0.5,
-#                             grid_trigger=True, lstm_trigger=True):
-#     """Generate the voltage trace only at selected sensors. Generated trace batch will be balanced with violaions and normal.
+def generate_prediction_data(file, lines_to_read=0, selected_sensor=[], 
+                            trace=39, pred_str=5, thres=4, ref=1, global_vio=True, balance=0.5,
+                            grid_trigger=True, lstm_trigger=True):
+    """Generate the voltage trace only at selected sensors. Generated trace batch will be balanced with violaions and normal.
 
-#     Arguments:
-#         file {str} -- gridIR name
+    Arguments:
+        file {str} -- gridIR name
 
-#     Keyword Arguments:
-#         lines_to_read {int} -- [description] (default: {0})
-#         selected_sensor {list} -- mask for selecting sensors (default: {[]})
-#         trace {int} -- length of the trace (default: {20}) The exact lenght = trace - pred_str
-#         pred_str {int} -- how many cpu cycles ahead to predict (default: {5})
-#         thres {int} -- [description] (default: {4})
-#         ref {int} -- [description] (default: {1})
-#         global_vio {bool} -- determine whether the violation check is global or not.
-#                             if true: traces are recorded as long as there is a violation on the grid.
-#                             if false: traces are only recorded if violation happens at the selected nodes(default: {True})
+    Keyword Arguments:
+        lines_to_read {int} -- [description] (default: {0})
+        selected_sensor {list} -- mask for selecting sensors (default: {[]})
+        trace {int} -- length of the trace (default: {20}) The exact lenght = trace - pred_str
+        pred_str {int} -- how many cpu cycles ahead to predict (default: {5})
+        thres {int} -- [description] (default: {4})
+        ref {int} -- [description] (default: {1})
+        global_vio {bool} -- determine whether the violation check is global or not.
+                            if true: traces are recorded as long as there is a violation on the grid.
+                            if false: traces are only recorded if violation happens at the selected nodes(default: {True})
 
-#     Returns:
-#         (batch, tag) -- batch: traces
-#                         tag:   violation types:
-#                                     0: no violation
-#                                     1: local violation
-#                                     2: global violation
-#     """
-#     if not lines_to_read:
-#         lines_to_read = np.inf
-#     count = 0
-#     grid_batch = []
-#     lstm_batch = []
-#     grid_tag = []
-#     lstm_tag = []
-#     with open(file, 'r') as v:
+    Returns:
+        (batch, tag) -- batch: traces
+                        tag:   violation types:
+                                    0: no violation
+                                    1: local violation
+                                    2: global violation
+    """
+    if not lines_to_read:
+        lines_to_read = np.inf
+    count = 0
+    grid_batch = []
+    lstm_batch = []
+    grid_tag = []
+    lstm_tag = []
+    with open(file, 'r') as v:
 
-#         buffer = [] # buffer is a queue with length trace
-#         #fill que
-#         for i in range(trace):
-#             vline = v.readline()
-#             v_formated = np.fromstring(vline, sep='    ', dtype='float')
-#             if v_formated.size:
-#                 buffer.append(v_formated)
-#             else:
-#                 print("this is a very unlikely situation. Why would there be a blank line in the middle of the file?")
-#         buffer = np.array(buffer) # make buffer a np array to fasten the operation
-#         if selected_sensor == "all":
-#             global_vio = False # disable tag=2
-#             selected_sensor = np.ones_like(v_formated, dtype=bool)
-#         counter_index = 0
-#         timer_index = 1
-#         norm_counter = 0
-#         norm_timer = 0
-#         norm = [norm_counter, norm_timer]
-#         local_vios = np.array([])
-#         vios = np.array([])
-#         while lines_to_read > 0:
-#             lines_to_read -= 1
-#             vline = v.readline()
-#             if vline == '':
-#                 break
-#             v_formated = np.fromstring(vline, sep='    ', dtype='float')
+        buffer = [] # buffer is a queue with length trace
+        #fill que
+        for i in range(trace):
+            vline = v.readline()
+            v_formated = np.fromstring(vline, sep='    ', dtype='float')
+            if v_formated.size:
+                buffer.append(v_formated)
+            else:
+                print("this is a very unlikely situation. Why would there be a blank line in the middle of the file?")
+        buffer = np.array(buffer) # make buffer a np array to fasten the operation
+        if selected_sensor == "all":
+            global_vio = False # disable tag=2
+            selected_sensor = np.ones_like(v_formated, dtype=bool)
+        counter_index = 0
+        timer_index = 1
+        norm_counter = 0
+        norm_timer = 0
+        norm = [norm_counter, norm_timer]
+        local_vios = np.array([])
+        vios = np.array([])
+        while lines_to_read > 0:
+            lines_to_read -= 1
+            vline = v.readline()
+            if vline == '':
+                break
+            v_formated = np.fromstring(vline, sep='    ', dtype='float')
 
-#             if v_formated.size:
-#                 if not global_vio:
-#                     [local_vios, vio_mask] = get_violation(v_formated[selected_sensor], prev=buffer, mode=trace, ref=ref, thres=thres, return_mask=True)
-#                 else:
-#                     [vios, vio_mask] = get_violation(v_formated, prev=buffer, mode=trace, ref=ref, thres=thres, return_mask=True)
+            if v_formated.size:
+                if not global_vio:
+                    [local_vios, vio_mask] = get_violation(v_formated[selected_sensor], prev=buffer, mode=trace, ref=ref, thres=thres, return_mask=True)
+                else:
+                    [vios, vio_mask] = get_violation(v_formated, prev=buffer, mode=trace, ref=ref, thres=thres, return_mask=True)
                     
-#                 # update buffer like a queue. queue is too slow for other operation
-#                 buffer = np.roll(buffer, -1, axis=0)
-#                 buffer[-1,:] = v_formated
-#                 # logic to process the grid
-#                 if vios.size and not local_vios.size: # violation happens globally but not locally
-#                     # update counter
-#                     norm[counter_index] += 1
-#                     norm[timer_index] += trace + pred_str - 1
-#                     # register grid data
-#                     if grid_trigger:
-#                         grid_batch.append(buffer[:trace-pred_str, selected_sensor].T)
-#                         grid_tag.append(2)
-#                     # randomly select strictly non-violation location
-#                     # shuffle_buffer = np.copy(vio_mask)
-#                     # np.random.shuffle(shuffle_buffer)
-#                     # non_vio = np.bitwise_and(shuffle_buffer, np.bitwise_not(vio_mask))
-#                     if lstm_trigger:
-#                         non_vio = select_other_nodes(vio_mask, balance=balance)
-#                     # register lstm data
-#                         lstm_batch.append(buffer[:trace-pred_str, vio_mask].T)
-#                         lstm_tag += [1] * np.sum(vio_mask)
-#                         lstm_batch.append(buffer[:trace-pred_str, non_vio].T)
-#                         lstm_tag += [0] * np.sum(non_vio)
+                # update buffer like a queue. queue is too slow for other operation
+                buffer = np.roll(buffer, -1, axis=0)
+                buffer[-1,:] = v_formated
+                # logic to process the grid
+                if vios.size and not local_vios.size: # violation happens globally but not locally
+                    # update counter
+                    norm[counter_index] += 1
+                    norm[timer_index] += trace + pred_str - 1
+                    # register grid data
+                    if grid_trigger:
+                        grid_batch.append(buffer[:trace-pred_str, selected_sensor].T)
+                        grid_tag.append(2)
+                    # randomly select strictly non-violation location
+                    # shuffle_buffer = np.copy(vio_mask)
+                    # np.random.shuffle(shuffle_buffer)
+                    # non_vio = np.bitwise_and(shuffle_buffer, np.bitwise_not(vio_mask))
+                    if lstm_trigger:
+                        non_vio = select_other_nodes(vio_mask, balance=balance)
+                    # register lstm data
+                        lstm_batch.append(buffer[:trace-pred_str, vio_mask].T)
+                        lstm_tag += [1] * np.sum(vio_mask)
+                        lstm_batch.append(buffer[:trace-pred_str, non_vio].T)
+                        lstm_tag += [0] * np.sum(non_vio)
 
-#                 elif local_vios.size: # local violation
-#                     # update counter
-#                     norm[counter_index] += 1
-#                     norm[timer_index] += trace + pred_str - 1
-#                     # register grid data
-#                     if grid_trigger:
-#                         grid_batch.append(buffer[:trace-pred_str, selected_sensor].T)
-#                         grid_tag.append(1)                    
-#                     # randomly select strictly non-violation location
-#                     if lstm_trigger:
-#                         non_vio = select_other_nodes(vio_mask, balance=balance)
-#                         # register lstm data
-#                         lstm_batch.append(buffer[:trace-pred_str, vio_mask].T)
-#                         lstm_tag += [1] * np.sum(vio_mask)
-#                         lstm_batch.append(buffer[:trace-pred_str, non_vio].T)
-#                         lstm_tag += [0] * np.sum(non_vio)
-#                 else: # normal
-#                     if norm[counter_index] != 0: # only update timer if there is a counter.
-#                         norm[timer_index] -= 1
-#                 if norm[timer_index] % (trace + pred_str)==0 and norm[counter_index] != 0:
-#                     norm[counter_index] -= 1
-#                     grid_batch.append(buffer[:trace-pred_str, selected_sensor].T)
-#                     grid_tag.append(0)
-#     lstm_batch = np.vstack(lstm_batch)
-#     if grid_batch:
-#         grid_batch = np.stack(grid_batch)
-#     else:
-#         print("Error, no violation found!!!")
-#     if norm[counter_index] > 0:
-#         print("Warning: File ends before enough instances collected. Total counts:", norm[counter_index])
-#     return (lstm_batch, lstm_tag, grid_batch, grid_tag)
+                elif local_vios.size: # local violation
+                    # update counter
+                    norm[counter_index] += 1
+                    norm[timer_index] += trace + pred_str - 1
+                    # register grid data
+                    if grid_trigger:
+                        grid_batch.append(buffer[:trace-pred_str, selected_sensor].T)
+                        grid_tag.append(1)                    
+                    # randomly select strictly non-violation location
+                    if lstm_trigger:
+                        non_vio = select_other_nodes(vio_mask, balance=balance)
+                        # register lstm data
+                        lstm_batch.append(buffer[:trace-pred_str, vio_mask].T)
+                        lstm_tag += [1] * np.sum(vio_mask)
+                        lstm_batch.append(buffer[:trace-pred_str, non_vio].T)
+                        lstm_tag += [0] * np.sum(non_vio)
+                else: # normal
+                    if norm[counter_index] != 0: # only update timer if there is a counter.
+                        norm[timer_index] -= 1
+                if norm[timer_index] % (trace + pred_str)==0 and norm[counter_index] != 0:
+                    norm[counter_index] -= 1
+                    grid_batch.append(buffer[:trace-pred_str, selected_sensor].T)
+                    grid_tag.append(0)
+    lstm_batch = np.vstack(lstm_batch)
+    if grid_batch:
+        grid_batch = np.stack(grid_batch)
+    else:
+        print("Error, no violation found!!!")
+    if norm[counter_index] > 0:
+        print("Warning: File ends before enough instances collected. Total counts:", norm[counter_index])
+    return (lstm_batch, lstm_tag, grid_batch, grid_tag)
 
 
 class training_data_factory():
