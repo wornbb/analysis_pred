@@ -7,25 +7,88 @@ import pandas
 from sklearn.metrics import confusion_matrix
 from GLSP import *
 class benchmark_factory():
-    def __init__(self, model_fname, data_list, exp_name):
+    def __init__(self, model_fname, data_list, exp_name, mode):
         self.model_fname = model_fname
         self.data_list = data_list
         self.models = self.load_benchmark_models(model_fname)
-        self.benchmarks = self.load_benchmark_data(data_list)
+        self.loaded_benchmark = 0
         self.exp_name = exp_name
-    def regression_mode_predict(self, model, x, y):
-        regression = model.predict(x)
-        prediction = np.bitwise_and(regression >= 1.04, regression <= 0.96)
-    def benchmarking(self, mode):
-        result_template = {"accs":[], "tp":0,"fp":0,"tn":0,"fn":0}
+        self.mode = mode
+        if mode == "regression":
+            self.predictor = self.regression_mode_predict
+        elif mode == "neural":
+            self.predictor = self.neural_mode_predict
+    def blank_result(self):
+        result = {"accs":0, "tp":0,"fp":0,"tn":0,"fn":0}
+        if self.mode == "regression":
+            result["regression_hit"] = 0
+            result["regression_total"] = 0
+        return result
+    def regression_mode_predict(self, model, x):
+        regression = model.predict(x[::2])
+        violation = np.bitwise_and(regression >= 1.04, regression <= 0.96)
+        if violation.any():
+            prediction = 1
+        else:
+            prediction = 0
+        return [prediction, regression]
+    def neural_mode_predict(self):
+        a = 1
+    def evaluator(self, model, x, y):
+        sample_size = x.shape[0]
+        result = self.blank_result()
+        for sample in range(sample_size):
+            from_predictor = self.predictor(model, x[:, sample])
+            result = self.test_prediction(from_predictor, x, y, sample, result)
+        result = self.finalize_result(result)
+        return result
+    def finalize_result(self, result):
+        result["acc"] = (result["tp"] + result["tn"]) / (result["fp"] + result["fn"])
+        if self.mode == "regression":
+            result["regression_acc"] = result["regression_acc"] / result["regression_total"]
+        return result
+    def test_prediction(self, from_predictor, x, y, sample, result):
+        if self.mode == "regression":
+            result['regression_total'] += 1
+            prediction = from_predictor[0]
+            regression = from_predictor[1]
+            # dirty fixing
+            pred_str = self.loaded_model
+            # regression benchmarking
+            target = x[1::2,sample + pred_str]
+            error = np.absolute(regression - target)
+            diff = error / regression
+            max_diff = np.amax(diff)
+            if max_diff <= 1/10**4:
+                result["regression_acc"] += 1
+        else:
+            prediction = from_predictor
+            pred_str = 5
+        # register regression matrix
+        key = ""
+        if prediction == y[sample + pred_str]:
+            key += "t"
+        else:
+            key += "n"
+        if prediction == 1:
+            key += "p"
+        else:
+            key += "n"
+        result[key] += 1
+        return result
+    def benchmarking(self):
         if type(self.models) is not list:
             self.models = [self.models]
-        self.evaluation = []
+        self.all_evaluations = []
+        self.evaluation = dict.fromkeys(self.data_list)
+        self.loaded_model = 0
         for model in self.models:
-            new_result = result_template
-            for benchmark in self.benchmarks:
-
-            self.evaluation.append(new_result)
+            for dataset in self.data_list:
+                benchmark = self.load_benchmark_data(dataset)
+                result = self.evaluator(model, benchmark[0], benchmark[1])
+                self.evaluation[dataset] = result
+            self.all_evaluations.append(self.evaluation)
+            self.loaded_model += 1
 
 
     def generate_avg_acc_plt_data(self):
@@ -82,18 +145,15 @@ class benchmark_factory():
             saved_model = pickle.load(open(model_fname, 'rb'))
         self.models= saved_model
         return self.models
-    def load_benchmark_data(self, data_list):
-        data = []
-        for fname in data_list:
-            with h5py.File(fname, 'r') as f:
-                x = f["data"][()]
-                tag = f["tag"][()]
-                tag = np.bitwise_not(tag < 1.5)
-                #tag = to_categorical(tag)
-            data.append([x, tag])
-        return data
+    def load_benchmark_data(self, fname):
+        with h5py.File(fname, 'r') as f:
+            x = f["x"][()]
+            tag = f["y"][()]
+            tag = tag < 1.5
+        return [x, tag.astype('int')]
 
 if __name__ == "__main__":
-    data_list = ["balanced_gird_sensor.freqmine2c.h5", "balanced_gird_sensor.facesim2c.h5"]
+    data_list = [r"VoltNet_2c.h5"]
     gp_models = "models_correct_score"
-    gp_benchmark = benchmark_factory(gp_models, data_list,"gp")
+    gp_benchmark = benchmark_factory(gp_models, data_list,exp_name="gp",mode="regression")
+    gp_benchmark.benchmarking()

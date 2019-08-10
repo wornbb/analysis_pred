@@ -176,129 +176,263 @@ def read_violation(file, lines_to_read=0, start_line=0, trace=0, thres=4, ref=1,
     if count > 0:
         print("Warning: File ends before enough instances collected. Total counts:", total - count)
     return (batch, dim)
-def generate_prediction_data(file, lines_to_read=0, selected_sensor=[], 
+# def generate_prediction_data(file, lines_to_read=0, selected_sensor=[], 
+#                             trace=39, pred_str=5, thres=4, ref=1, global_vio=True, balance=0.5,
+#                             grid_trigger=True, lstm_trigger=True):
+#     """Generate the voltage trace only at selected sensors. Generated trace batch will be balanced with violaions and normal.
+
+#     Arguments:
+#         file {str} -- gridIR name
+
+#     Keyword Arguments:
+#         lines_to_read {int} -- [description] (default: {0})
+#         selected_sensor {list} -- mask for selecting sensors (default: {[]})
+#         trace {int} -- length of the trace (default: {20}) The exact lenght = trace - pred_str
+#         pred_str {int} -- how many cpu cycles ahead to predict (default: {5})
+#         thres {int} -- [description] (default: {4})
+#         ref {int} -- [description] (default: {1})
+#         global_vio {bool} -- determine whether the violation check is global or not.
+#                             if true: traces are recorded as long as there is a violation on the grid.
+#                             if false: traces are only recorded if violation happens at the selected nodes(default: {True})
+
+#     Returns:
+#         (batch, tag) -- batch: traces
+#                         tag:   violation types:
+#                                     0: no violation
+#                                     1: local violation
+#                                     2: global violation
+#     """
+#     if not lines_to_read:
+#         lines_to_read = np.inf
+#     count = 0
+#     grid_batch = []
+#     lstm_batch = []
+#     grid_tag = []
+#     lstm_tag = []
+#     with open(file, 'r') as v:
+
+#         buffer = [] # buffer is a queue with length trace
+#         #fill que
+#         for i in range(trace):
+#             vline = v.readline()
+#             v_formated = np.fromstring(vline, sep='    ', dtype='float')
+#             if v_formated.size:
+#                 buffer.append(v_formated)
+#             else:
+#                 print("this is a very unlikely situation. Why would there be a blank line in the middle of the file?")
+#         buffer = np.array(buffer) # make buffer a np array to fasten the operation
+#         if selected_sensor == "all":
+#             global_vio = False # disable tag=2
+#             selected_sensor = np.ones_like(v_formated, dtype=bool)
+#         counter_index = 0
+#         timer_index = 1
+#         norm_counter = 0
+#         norm_timer = 0
+#         norm = [norm_counter, norm_timer]
+#         local_vios = np.array([])
+#         vios = np.array([])
+#         while lines_to_read > 0:
+#             lines_to_read -= 1
+#             vline = v.readline()
+#             if vline == '':
+#                 break
+#             v_formated = np.fromstring(vline, sep='    ', dtype='float')
+
+#             if v_formated.size:
+#                 if not global_vio:
+#                     [local_vios, vio_mask] = get_violation(v_formated[selected_sensor], prev=buffer, mode=trace, ref=ref, thres=thres, return_mask=True)
+#                 else:
+#                     [vios, vio_mask] = get_violation(v_formated, prev=buffer, mode=trace, ref=ref, thres=thres, return_mask=True)
+                    
+#                 # update buffer like a queue. queue is too slow for other operation
+#                 buffer = np.roll(buffer, -1, axis=0)
+#                 buffer[-1,:] = v_formated
+#                 # logic to process the grid
+#                 if vios.size and not local_vios.size: # violation happens globally but not locally
+#                     # update counter
+#                     norm[counter_index] += 1
+#                     norm[timer_index] += trace + pred_str - 1
+#                     # register grid data
+#                     if grid_trigger:
+#                         grid_batch.append(buffer[:trace-pred_str, selected_sensor].T)
+#                         grid_tag.append(2)
+#                     # randomly select strictly non-violation location
+#                     # shuffle_buffer = np.copy(vio_mask)
+#                     # np.random.shuffle(shuffle_buffer)
+#                     # non_vio = np.bitwise_and(shuffle_buffer, np.bitwise_not(vio_mask))
+#                     if lstm_trigger:
+#                         non_vio = select_other_nodes(vio_mask, balance=balance)
+#                     # register lstm data
+#                         lstm_batch.append(buffer[:trace-pred_str, vio_mask].T)
+#                         lstm_tag += [1] * np.sum(vio_mask)
+#                         lstm_batch.append(buffer[:trace-pred_str, non_vio].T)
+#                         lstm_tag += [0] * np.sum(non_vio)
+
+#                 elif local_vios.size: # local violation
+#                     # update counter
+#                     norm[counter_index] += 1
+#                     norm[timer_index] += trace + pred_str - 1
+#                     # register grid data
+#                     if grid_trigger:
+#                         grid_batch.append(buffer[:trace-pred_str, selected_sensor].T)
+#                         grid_tag.append(1)                    
+#                     # randomly select strictly non-violation location
+#                     if lstm_trigger:
+#                         non_vio = select_other_nodes(vio_mask, balance=balance)
+#                         # register lstm data
+#                         lstm_batch.append(buffer[:trace-pred_str, vio_mask].T)
+#                         lstm_tag += [1] * np.sum(vio_mask)
+#                         lstm_batch.append(buffer[:trace-pred_str, non_vio].T)
+#                         lstm_tag += [0] * np.sum(non_vio)
+#                 else: # normal
+#                     if norm[counter_index] != 0: # only update timer if there is a counter.
+#                         norm[timer_index] -= 1
+#                 if norm[timer_index] % (trace + pred_str)==0 and norm[counter_index] != 0:
+#                     norm[counter_index] -= 1
+#                     grid_batch.append(buffer[:trace-pred_str, selected_sensor].T)
+#                     grid_tag.append(0)
+#     lstm_batch = np.vstack(lstm_batch)
+#     if grid_batch:
+#         grid_batch = np.stack(grid_batch)
+#     else:
+#         print("Error, no violation found!!!")
+#     if norm[counter_index] > 0:
+#         print("Warning: File ends before enough instances collected. Total counts:", norm[counter_index])
+#     return (lstm_batch, lstm_tag, grid_batch, grid_tag)
+
+
+class training_data_factory():
+    def __init__(self, load_flist, lines_to_read=0, 
                             trace=39, pred_str=5, thres=4, ref=1, global_vio=True, balance=0.5,
-                            grid_trigger=True, lstm_trigger=True):
-    """Generate the voltage trace only at selected sensors. Generated trace batch will be balanced with violaions and normal.
-
-    Arguments:
-        file {str} -- gridIR name
-
-    Keyword Arguments:
-        lines_to_read {int} -- [description] (default: {0})
-        selected_sensor {list} -- mask for selecting sensors (default: {[]})
-        trace {int} -- length of the trace (default: {20}) The exact lenght = trace - pred_str
-        pred_str {int} -- how many cpu cycles ahead to predict (default: {5})
-        thres {int} -- [description] (default: {4})
-        ref {int} -- [description] (default: {1})
-        global_vio {bool} -- determine whether the violation check is global or not.
-                            if true: traces are recorded as long as there is a violation on the grid.
-                            if false: traces are only recorded if violation happens at the selected nodes(default: {True})
-
-    Returns:
-        (batch, tag) -- batch: traces
-                        tag:   violation types:
-                                    0: no violation
-                                    1: local violation
-                                    2: global violation
-    """
-    if not lines_to_read:
-        lines_to_read = np.inf
-    count = 0
-    grid_batch = []
-    lstm_batch = []
-    grid_tag = []
-    lstm_tag = []
-    with open(file, 'r') as v:
-
-        buffer = [] # buffer is a queue with length trace
-        #fill que
-        for i in range(trace):
-            vline = v.readline()
-            v_formated = np.fromstring(vline, sep='    ', dtype='float')
-            if v_formated.size:
-                buffer.append(v_formated)
+                            grid_trigger=True, grid_fsave="",  lstm_trigger=True, lstm_fsave=""):
+        # sanity check
+        if grid_trigger and grid_fsave == "":
+            raise RuntimeError("To save grid data, a file name has to be provided")
+        if lstm_trigger and lstm_fsave == "":
+            raise RuntimeError("To save lstm data, a file name has to be provided")
+        # saving init parameters
+        self.load_flist = load_flist
+        if not lines_to_read:
+            self.lines_to_read = np.inf
+        else:
+            self.lines_to_read = lines_to_read
+        self.trace = trace
+        self.pred_str = pred_str
+        self.thres = thres
+        self.ref = ref
+        self.global_vio = global_vio
+        self.balance = balance
+        self.grid_trigger = grid_trigger
+        self.grid_fsave = grid_fsave
+        self.lstm_trigger = lstm_trigger
+        self.lstm_fsave = lstm_fsave
+        # init file structure
+        [self.lstm, self.grid] = self.open_for_write()
+        # extra configuration
+        self.lstm_count = 0
+        self.grid_count = 0
+    def generate(self):
+        for fname in self.load_flist:
+            gridIR = self.open_for_read(fname)
+            self.process_gridIR(gridIR)
+            gridIR.close()
+        self.lstm.close()
+        self.grid.close()
+    def process_gridIR(self, lf):
+        buffer = self.init_buffer(lf)
+        norm = {"counter": 0, "timer": 0}
+        vios = np.array([])
+        while self.lines_to_read > 0:
+            self.lines_to_read -= 1
+            line = self.read_line(lf)
+            if line.size: # eof
+                break
+            [vios, vio_mask] = get_violation(line, prev=buffer, mode=self.trace, ref=self.ref, thres=self.thres, return_mask=True)
+            buffer = self.update_buffer(buffer, line)
+            if vios.size:
+                # update norm counter
+                norm["counter"] += 1
+                norm["timer"] += self.trace + self.pred_str - 1
+                self.register_grid(buffer, tag=1)
+                self.register_lstm(vios, vio_mask, buffer)
+            else:
+                if norm["counter"] != 0: # only update timer if there is a counter.
+                    norm["timer"] -= 1
+            if norm["timer"] % (self.trace + self.pred_str)==0 and norm["counter"] != 0:
+                norm["counter"] -= 1
+                self.register_grid(buffer, tag=0)
+    def register_lstm(self, vios, vio_mask, buffer):
+        if self.lstm_trigger:
+            norm_mask = self.select_other_nodes(vio_mask)
+            vio_count = np.sum(vio_mask)
+            norm_count = np.sum(norm_mask)
+            new_lstm_count = self.lstm_count + vio_count + norm_count
+            self.lstmX.resize(new_lstm_count, axis=0)
+            self.lstmY.resize(new_lstm_count, axis=0)
+            self.lstmX[self.lstm_count:self.lstm_count+vio_count,:,0] = buffer[:self.trace-self.pred_str, vio_mask].T
+            self.lstmY[self.lstm_count:self.lstm_count+vio_count] = 1
+            self.lstmX[self.lstm_count+vio_count:new_lstm_count,:,0] = buffer[:self.trace-self.pred_str, norm_mask].T
+            self.lstmY[self.lstm_count+vio_count:new_lstm_count] = 0
+            self.lstm_count = new_lstm_count
+    def register_grid(self, buffer, tag):
+        if self.grid_count:
+            self.grid_count += 1
+            self.gridX.resize(self.grid_count, axis=0)
+            self.gridY.resize(self.grid_count, axis=0)
+            self.gridX[-1,:,:,0] = buffer[:self.trace-self.pred_str, :].T
+            self.gridY[-1] = tag
+    def select_other_nodes(self, vio_mask):
+        total_positive = np.sum(vio_mask)
+        total_length = np.size(vio_mask)
+        multiplier = int(1 / self.balance)
+        if total_positive * multiplier <= total_length:
+            shuffle_buffer = [1] * total_positive * multiplier + [0] * (total_length - total_positive * multiplier)
+        else:
+            raise ValueError("multiplier: ", multiplier ," too big")
+        shuffle_buffer = np.array(shuffle_buffer)
+        np.random.shuffle(shuffle_buffer)
+        norm_mask = np.bitwise_and(shuffle_buffer, np.bitwise_not(vio_mask))
+        return norm_mask
+    def open_for_read(self, fname):
+        fload = open(fname, 'r')
+        return fload
+    def open_for_write(self):
+        temp_read = self.open_for_read(self.load_flist[0])
+        example_line = self.read_line(temp_read)
+        self.grid_size = np.size(example_line)
+        temp_read.close()
+        if self.lstm_trigger:
+            lstm = h5py.File(self.lstm_fsave, "w")
+            self.lstmX = lstm.create_dataset("x", shape=(1, self.trace - self.pred_str, 1), maxshape=(None, self.trace - self.pred_str, 1))
+            self.lstmY = lstm.create_dataset("y", shape=(1,), maxshape=(None,))
+        else:
+            lstm = None
+        if self.grid_trigger:
+            grid = h5py.File(self.grid_fsave, "w")
+            self.gridX = grid.create_dataset("x", shape=(1, self.grid_size, self.trace - self.pred_str, 1), maxshape=(None, self.grid_size, self.trace - self.pred_str, 1))
+            self.gridY = grid.create_dataset("y", shape=(1,), maxshape=(None,))
+        else:
+            grid = None
+        return [lstm, grid]
+    def read_line(self, lf):
+        line = lf.readline()
+        line_formated = np.fromstring(line, sep='   ', dtype='float')
+        return line_formated
+    def init_buffer(self, lf):
+        buffer = []
+        for i in range(self.trace):
+            line = self.read_line(lf)
+            self.lines_to_read -= 1
+            if line.size:
+                buffer.append(line)
             else:
                 print("this is a very unlikely situation. Why would there be a blank line in the middle of the file?")
-        buffer = np.array(buffer) # make buffer a np array to fasten the operation
-        if selected_sensor == "all":
-            global_vio = False # disable tag=2
-            selected_sensor = np.ones_like(v_formated, dtype=bool)
-        counter_index = 0
-        timer_index = 1
-        norm_counter = 0
-        norm_timer = 0
-        norm = [norm_counter, norm_timer]
-        local_vios = np.array([])
-        vios = np.array([])
-        while lines_to_read > 0:
-            lines_to_read -= 1
-            vline = v.readline()
-            if vline == '':
-                break
-            v_formated = np.fromstring(vline, sep='    ', dtype='float')
-
-            if v_formated.size:
-                if not global_vio:
-                    [local_vios, vio_mask] = get_violation(v_formated[selected_sensor], prev=buffer, mode=trace, ref=ref, thres=thres, return_mask=True)
-                else:
-                    [vios, vio_mask] = get_violation(v_formated, prev=buffer, mode=trace, ref=ref, thres=thres, return_mask=True)
-                    
-                # update buffer like a queue. queue is too slow for other operation
-                buffer = np.roll(buffer, -1, axis=0)
-                buffer[-1,:] = v_formated
-                # logic to process the grid
-                if vios.size and not local_vios.size: # violation happens globally but not locally
-                    # update counter
-                    norm[counter_index] += 1
-                    norm[timer_index] += trace + pred_str - 1
-                    # register grid data
-                    if grid_trigger:
-                        grid_batch.append(buffer[:trace-pred_str, selected_sensor].T)
-                        grid_tag.append(2)
-                    # randomly select strictly non-violation location
-                    # shuffle_buffer = np.copy(vio_mask)
-                    # np.random.shuffle(shuffle_buffer)
-                    # non_vio = np.bitwise_and(shuffle_buffer, np.bitwise_not(vio_mask))
-                    if lstm_trigger:
-                        non_vio = select_other_nodes(vio_mask, balance=balance)
-                    # register lstm data
-                        lstm_batch.append(buffer[:trace-pred_str, vio_mask].T)
-                        lstm_tag += [1] * np.sum(vio_mask)
-                        lstm_batch.append(buffer[:trace-pred_str, non_vio].T)
-                        lstm_tag += [0] * np.sum(non_vio)
-
-                elif local_vios.size: # local violation
-                    # update counter
-                    norm[counter_index] += 1
-                    norm[timer_index] += trace + pred_str - 1
-                    # register grid data
-                    if grid_trigger:
-                        grid_batch.append(buffer[:trace-pred_str, selected_sensor].T)
-                        grid_tag.append(1)                    
-                    # randomly select strictly non-violation location
-                    if lstm_trigger:
-                        non_vio = select_other_nodes(vio_mask, balance=balance)
-                        # register lstm data
-                        lstm_batch.append(buffer[:trace-pred_str, vio_mask].T)
-                        lstm_tag += [1] * np.sum(vio_mask)
-                        lstm_batch.append(buffer[:trace-pred_str, non_vio].T)
-                        lstm_tag += [0] * np.sum(non_vio)
-                else: # normal
-                    if norm[counter_index] != 0: # only update timer if there is a counter.
-                        norm[timer_index] -= 1
-                if norm[timer_index] % (trace + pred_str)==0 and norm[counter_index] != 0:
-                    norm[counter_index] -= 1
-                    grid_batch.append(buffer[:trace-pred_str, selected_sensor].T)
-                    grid_tag.append(0)
-    lstm_batch = np.vstack(lstm_batch)
-    if grid_batch:
-        grid_batch = np.stack(grid_batch)
-    else:
-        print("Error, no violation found!!!")
-    if norm[counter_index] > 0:
-        print("Warning: File ends before enough instances collected. Total counts:", norm[counter_index])
-    return (lstm_batch, lstm_tag, grid_batch, grid_tag)
+        buffer = np.array(buffer)
+        return buffer
+    def update_buffer(self, buffer, line):
+        buffer = np.roll(buffer, -1, axis=0)
+        buffer[-1,:] = line
+        return buffer
 def load_h5_grid(fname):
     with h5py.File(fname,'r') as f:
         data = f["x"].value
