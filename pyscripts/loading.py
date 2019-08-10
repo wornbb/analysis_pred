@@ -389,7 +389,7 @@ class training_data_factory():
         if total_positive * multiplier <= total_length:
             shuffle_buffer = [1] * total_positive * multiplier + [0] * (total_length - total_positive * multiplier)
         else:
-            raise ValueError("multiplier: ", multiplier ," too big")
+            shuffle_buffer = [0] * total_length
         shuffle_buffer = np.array(shuffle_buffer, dtype=bool)
         np.random.shuffle(shuffle_buffer)
         norm_mask = np.bitwise_and(shuffle_buffer, np.bitwise_not(vio_mask))
