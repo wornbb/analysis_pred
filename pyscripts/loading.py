@@ -369,7 +369,7 @@ class training_data_factory():
             norm_count = np.sum(norm_mask)
             print(norm_count)
             print(vio_count)
-            print(lstm_count)
+            print(self.lstm_count)
             new_lstm_count = self.lstm_count + vio_count + norm_count
             print(new_lstm_count)
             self.lstmX.resize(new_lstm_count, axis=0)
