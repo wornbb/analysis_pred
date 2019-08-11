@@ -147,10 +147,15 @@ class ee_sensor_selector():
             return segmented
         return np.array([],dtype=np.double)
 class ee_model():
-    def __init__(self, flp_fname, gridIR, segment_trigger=True):
+    def __init__(self, flp_fname, gridIR, segment_trigger=True, placement_mode="uniform", placement_para=46):
         self.flp_fname = flp_fname
         self.girdIR = gridIR
         self.segment_trigger = segment_trigger
+        self.sensor_distribution = distribution
+        self.total_budget = total_budget
+        if placement_mode == "uniform":
+            self.total_budget = placement_para
+            self.placer = self.uniform_placement
         # loading
         self.flp = self.load_flp()
     def load_flp(self)->dict:
@@ -206,22 +211,21 @@ class ee_model():
         x = x[:,self.selected_sensors]
         y_pred = self.predictor.predict(x)
         return [0, mean_squared_error(y, y_pred)]
-    def generate_placement_plan(self, distribution="uniform", total_budget):
+    def generate_placement_plan(self):
         placement_plan = []
+        index = 1
         if self.segment_trigger:
             for unit in self.flp:
-                placement_plan.append((unit, index, 1))
-                go_right = int(flp[unit][0] // pitch)
-                go_up = int(flp[unit][1] // pitch)
-                #upper left corner
-                x = int(flp[unit][2] // pitch)
-                y = int(rows - flp[unit][3] // pitch - go_up)
-                unscaled_mask[y:y+go_up, x:x+go_right] = index
+                budget = self.placer(unit)
+                placement_plan((unit, index, budget))
+                if distribution == "uniform":
+                    placement_plan.append((unit, index, 1))
                 index += 1   
         else:
-            placement_plan = [("all",1,total_budget)]
-        if distribution == "uniform":
-
+            placement_plan = [("all", index, total_budget)]
+    def uniform_placement(self, unit, index):
+        
+        return budget
 
 if __name__ == "__main__":
 
