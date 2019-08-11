@@ -224,7 +224,7 @@ class ee_model():
         else:
             placement_plan = [("all", index, total_budget)]
     def uniform_placement(self, unit, index):
-        
+        a = 1
         return budget
 
 if __name__ == "__main__":
