@@ -9,6 +9,7 @@ from tensorflow.keras.callbacks import ModelCheckpoint, CSVLogger
 from clr_callback import*
 from tensorflow_model_optimization.sparsity import keras as sparsity
 from tensorflow.keras.optimizers import *
+from sklearn.ensemble import BaggingRegressor
 
 import os
 
@@ -16,6 +17,11 @@ from sklearn.preprocessing import MinMaxScaler
 
 
 class preprocessor():
+    """scale the traced_grid and LSTM trace data for training
+    Method:
+        scale_grid_trace: process traced grid
+    Attribute:
+    """
     def __init__(self, load_fname, save_fname):
         self.load_fname = load_fname
         self.save_fname = save_fname
@@ -25,13 +31,13 @@ class preprocessor():
             self.load_y = f["x"][()]
 
     def scale_grid_trace(self):
-        self.load_samples = self.load_x.shape[0]
+        self.loaded_samples = self.load_x.shape[0]
         self.trace_len = self.load_x.shape[2]
         self.grid_size = self.load_x.shape[1]
         with h5py.File(self.save_fname, 'w') as f:
             self.save_x = f.create_dataset("x", shape=self.load_x.shape)
             self.save_y = f.create_dataset("y",data=self.load_y)
-            for sample in range(self.load_samples):
+            for sample in range(self.loaded_samples):
                 self.save_x[sample,:,:,0] = self.scaler.fit_transform(self.load_x[sample,:,:,0])
     def sacle_lstm(self):
         x = np.squeeze(x, axis=(2))
@@ -46,11 +52,16 @@ class preprocessor():
             self.save_x = f.create_dataset("x", data=scaled_x)
             self.save_y = f.create_dataset("y", data=y)
 if __name__ == "__main__":
-    load_fname = "/media/yi/yi_final_resort/VoltNet_2c.h5"
-    save_fname = "/media/yi/yi_final_resort/Scaled_VoltNet_2c.h5"
+    import os
+    if os.name == 'nt':
+        load_fname = "VoltNet_2c.h5"
+        save_fname = "Scaled_VoltNet_2c.h5"
+    else:
+        load_fname = "/media/yi/yi_final_resort/VoltNet_2c.h5"
+        save_fname = "/media/yi/yi_final_resort/Scaled_VoltNet_2c.h5"
     #grid_processor = preprocessor(load_fname,save_fname)
     #grid_processor.scale_grid_trace()
-    sensor_model = load_model(r'residual.3.biLSTM.45.03-0.836-0.393.hdf5')
+    sensor_model = load_model(r'residual.4.biLSTM.45.10-0.951-0.140.hdf5')
     with h5py.File(save_fname,'r') as f:
         x = f["x"][()]
     for node in range(100):

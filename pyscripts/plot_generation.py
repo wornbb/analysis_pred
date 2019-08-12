@@ -6,6 +6,7 @@ from keras.utils import to_categorical
 import pandas
 from sklearn.metrics import confusion_matrix
 from GLSP import *
+from loading import *
 class benchmark_factory():
     def __init__(self, model_fname, data_list, exp_name, mode):
         self.model_fname = model_fname
@@ -18,6 +19,8 @@ class benchmark_factory():
             self.predictor = self.regression_mode_predict
         elif mode == "neural":
             self.predictor = self.neural_mode_predict
+        # default parameters
+        self.lines_to_read = 10000
     def blank_result(self):
         result = {"accs":0, "tp":0,"fp":0,"tn":0,"fn":0}
         if self.mode == "regression":
@@ -25,7 +28,7 @@ class benchmark_factory():
             result["regression_total"] = 0
         return result
     def regression_mode_predict(self, model, x):
-        regression = model.predict(x[::2])
+        regression = model.predict(x[::2,:])
         violation = np.bitwise_and(regression >= 1.04, regression <= 0.96)
         if violation.any():
             prediction = 1
@@ -38,7 +41,7 @@ class benchmark_factory():
         sample_size = x.shape[0]
         result = self.blank_result()
         for sample in range(sample_size):
-            from_predictor = self.predictor(model, x[:, sample])
+            from_predictor = self.predictor(model, x[sample:sample+1,::2])
             result = self.test_prediction(from_predictor, x, y, sample, result)
         result = self.finalize_result(result)
         return result
@@ -55,7 +58,7 @@ class benchmark_factory():
             # dirty fixing
             pred_str = self.loaded_model
             # regression benchmarking
-            target = x[1::2,sample + pred_str]
+            target = x[sample + pred_str,1::2]
             error = np.absolute(regression - target)
             diff = error / regression
             max_diff = np.amax(diff)
@@ -69,7 +72,7 @@ class benchmark_factory():
         if prediction == y[sample + pred_str]:
             key += "t"
         else:
-            key += "n"
+            key += "f"
         if prediction == 1:
             key += "p"
         else:
@@ -89,8 +92,6 @@ class benchmark_factory():
                 self.evaluation[dataset] = result
             self.all_evaluations.append(self.evaluation)
             self.loaded_model += 1
-
-
     def generate_avg_acc_plt_data(self):
         fname = self.exp_name + ".avg_metric_curve.data"
         plt_data = {"model_order": self.models, "x": range(len(self.models))}
@@ -146,14 +147,23 @@ class benchmark_factory():
         self.models= saved_model
         return self.models
     def load_benchmark_data(self, fname):
-        with h5py.File(fname, 'r') as f:
-            x = f["x"][()]
-            tag = f["y"][()]
-            tag = tag < 1.5
+        if fname.endswith(".h5"):
+            with h5py.File(fname, 'r') as f:
+                x = f["x"][()]
+                tag = f["y"][()]
+                tag = tag < 1.5
+        elif fname.endswith(".gridIR"):
+            loader = regression_training_data_factory([fname], lines_to_read=self.lines_to_read)
+            [x, tag] = loader.generate()
+            tag = np.array(tag)
+            x = x.T
+        else:
+            print("undefined file type to load")
         return [x, tag.astype('int')]
 
 if __name__ == "__main__":
-    data_list = [r"VoltNet_2c.h5"]
+    #data_list = [r"VoltNet_2c.h5"]
+    data_list = [r"F:\\Yaswan2c\\Yaswan2c.gridIR"]
     gp_models = "models_correct_score"
     gp_benchmark = benchmark_factory(gp_models, data_list,exp_name="gp",mode="regression")
     gp_benchmark.benchmarking()

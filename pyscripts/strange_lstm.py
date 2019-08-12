@@ -14,7 +14,7 @@ import h5py
 import os
 fname = "C:\\Users\\Yi\\Desktop\\Yaswan2c\\Yaswan2c.gridIR"
 
-save_fname = "lstm_2c.h5"
+save_fname = r"F:\lstm_data\lstm_2c.h5.0.1"
 with h5py.File(save_fname,"r") as hf:
         x = hf["x"][()]
         y= hf["y"][()]
@@ -78,6 +78,6 @@ for s in range(4,5):
         model.fit(x_train, np.array(y_train),
                 batch_size=batch_size,
                 validation_data=(x_test[::401,:,:],np.array(y_test[::401])),
-                epochs=50,
+                epochs=15,
                 callbacks=callbacks,
                 verbose=1)

@@ -2,7 +2,7 @@ from keras.models import load_model
 import pickle
 import numpy as np
 import h5py
-
+from loading import *
 fname = "C:\\Users\\Yi\\Desktop\\Yaswan2c\\Yaswan2c.gridIR"
 save_fname = "combined_lstm_training.data"
 with h5py.File(save_fname,"r") as hf:
@@ -33,8 +33,19 @@ y_test = y[train_size:]
 #model = load_model('nn.32.model.12-0.684.hdf5')
 #model = load_model('nn.32.model.15-0.605.hdf5')
 #model = load_model('nn.34.biLSTM.18-0.171.hdf5') #96.45
-model = load_model('residual.3.biLSTM.45.15-0.997-0.008.hdf5')
-print(model.metrics_names)
-scores = model.evaluate(scaled_x[:,:34,:], y, verbose=0)
-print(sum(y_test)/len(y_test))
-print("Accuracy: %.2f%%" % (scores[1]*100))
+# model = load_model('residual.3.biLSTM.45.15-0.997-0.008.hdf5')
+# print(model.metrics_names)
+# scores = model.evaluate(scaled_x[:,:34,:], y, verbose=0)
+# print(sum(y_test)/len(y_test))
+# print("Accuracy: %.2f%%" % (scores[1]*100))
+
+
+with h5py.File('balanced_gird_sensor.Yaswan2c_desktop.h5','r') as f:
+        data = f["x"].value
+        tag = f["y"].value
+  #[x_train, y_train, x_test, y_test] = load_h5_grid(fname)
+        model_name = 'residual.4.biLSTM.45.10-0.951-0.140.hdf5'
+        sensor_model = load_frozen_lstm(model_name)
+        scores = sensor_model.evaluate(scaled_x[:,:34,:], y, verbose=0)
+        print(sum(y_test)/len(y_test))
+        print("Accuracy: %.2f%%" % (scores[1]*100))

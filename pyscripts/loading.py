@@ -61,6 +61,7 @@ def get_violation(data, occurrence=np.array([],dtype=np.double), ref=1, thres=4,
     margins = np.array([1 + thres/100, 1 - thres/100]) * ref
     time_stamp = 0
     new_occurrence = []
+    vios_record = []
     # following trick deals with the case when data is just a vector
     ndim = data.ndim
     if ndim == 1:
@@ -88,22 +89,23 @@ def get_violation(data, occurrence=np.array([],dtype=np.double), ref=1, thres=4,
 
         #new_occurrence.append(current_report)
         time_stamp += 1
-    if current_report[0].size:
-        #new_occurrence = np.hstack(new_occurrence)
-        new_occurrence = np.row_stack(current_report)
-        if mode:
-            trace = prev[:,vios]
-            new_occurrence = np.vstack((new_occurrence, trace))
-
-    if occurrence.size:
+        vios_record.append(vios)
         if current_report[0].size:
-            occurrence = np.hstack((occurrence, new_occurrence))
-    else:
-        if not current_report[0].size:
-            new_occurrence =  np.array([],dtype=np.double)
-        occurrence = new_occurrence
+            #new_occurrence = np.hstack(new_occurrence)
+            new_occurrence = np.row_stack(current_report)
+            if mode:
+                trace = prev[:,vios]
+                new_occurrence = np.vstack((new_occurrence, trace))
+
+        if occurrence.size:
+            if current_report[0].size:
+                occurrence = np.hstack((occurrence, new_occurrence))
+        else:
+            if not current_report[0].size:
+                new_occurrence =  np.array([],dtype=np.double)
+            occurrence = new_occurrence
     if return_mask:
-        return [occurrence, vios]
+        return [occurrence, vios_record]
     else:
         return occurrence
 
@@ -156,10 +158,11 @@ def read_violation(file, lines_to_read=0, start_line=0, trace=0, thres=4, ref=1,
                 print("this is a very unlikely situation. Why would there be a blank line in the file?")
         buffer = np.array(buffer)
         while lines_to_read > 0:
-            if vline == '':
-                break
+
             lines_to_read -= 1
             vline = v.readline()
+            if vline == '':
+                break
             v_formated = np.fromstring(vline, sep='    ', dtype='float')
             if v_formated.size:
                 vios = get_violation(v_formated, prev=buffer, mode=trace, reverse=reverse)
@@ -243,7 +246,7 @@ def generate_prediction_data(file, lines_to_read=0, selected_sensor=[],
                     [local_vios, vio_mask] = get_violation(v_formated[selected_sensor], prev=buffer, mode=trace, ref=ref, thres=thres, return_mask=True)
                 else:
                     [vios, vio_mask] = get_violation(v_formated, prev=buffer, mode=trace, ref=ref, thres=thres, return_mask=True)
-                    
+                vio_mask = vio_mask[0] # vio_mask originally a list
                 # update buffer like a queue. queue is too slow for other operation
                 buffer = np.roll(buffer, -1, axis=0)
                 buffer[-1,:] = v_formated
@@ -301,7 +304,7 @@ def generate_prediction_data(file, lines_to_read=0, selected_sensor=[],
     return (lstm_batch, lstm_tag, grid_batch, grid_tag)
 
 
-class training_data_factory():
+class voltnet_training_data_factory():
     def __init__(self, load_flist, lines_to_read=0, 
                             trace=39, pred_str=5, thres=4, ref=1, global_vio=True, balance=0.5,
                             grid_trigger=True, grid_fsave="",  lstm_trigger=True, lstm_fsave=""):
@@ -349,6 +352,7 @@ class training_data_factory():
                 print("eof")
                 break
             [vios, vio_mask] = get_violation(line, prev=buffer, mode=self.trace, ref=self.ref, thres=self.thres, return_mask=True)
+            vio_mask = vio_mask[0] # vio_mask originally a list
             buffer = self.update_buffer(buffer, line)
             if vios.size:
                 # update norm counter
@@ -464,6 +468,26 @@ def select_other_nodes(selected_nodes, balance=0.5):
     np.random.shuffle(shuffle_buffer)
     other_nodes = np.bitwise_and(shuffle_buffer, np.bitwise_not(selected_nodes))
     return other_nodes
+
+class regression_training_data_factory():
+    def __init__(self, load_flist, lines_to_read, start_line=0):
+        self.load_flist = load_flist
+        self.lines_to_read = lines_to_read
+        self.start_line = start_line
+    def generate(self):
+        for fname in self.load_flist:
+            grid_batch = read_volt_grid(fname, lines_to_read=self.lines_to_read, start_line=self.start_line)
+            self.x = grid_batch
+            [occurrence, vios_record] = get_violation(grid_batch, return_mask=True)
+            self.y = []
+            for vios in vios_record:
+                if vios.any():
+                    self.y.append(1)
+                else:
+                    self.y.append(0)
+        return [self.x, self.y]
+
+            
 if __name__ == "__main__":
     full_x = []
     full_y = []
