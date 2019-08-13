@@ -369,7 +369,7 @@ class voltnet_training_data_factory():
                 # register random lstm for normal grid
                 random_vio_percent = 0.01
                 random_vio_count = int(self.grid_size * random_vio_percent)
-                random_vios = np.array([1] * random_vio_count + [0] * (self.grid_size - random_vio_count))
+                random_vios = np.array([1] * random_vio_count + [0] * (self.grid_size - random_vio_count), dtype=bool)
                 self.register_lstm(vio_mask=random_vios, buffer=buffer, register_pos=False)
     def register_lstm(self,  vio_mask, buffer, register_pos=True, register_neg=True):
         if self.lstm_trigger:
@@ -383,8 +383,8 @@ class voltnet_training_data_factory():
                 self.lstmX[self.lstm_count:self.lstm_count+vio_count,:,0] = buffer[:self.trace-self.pred_str, vio_mask].T
                 self.lstmY[self.lstm_count:self.lstm_count+vio_count] = 1
             if register_neg:
-                self.lstmX[self.lstm_count+vio_count:new_lstm_count,:,0] = buffer[:self.trace-self.pred_str, norm_mask].T
-                self.lstmY[self.lstm_count+vio_count:new_lstm_count] = 0
+                self.lstmX[self.lstm_count+vio_count* int(register_pos):new_lstm_count,:,0] = buffer[:self.trace-self.pred_str, norm_mask].T
+                self.lstmY[self.lstm_count+vio_count* int(register_pos):new_lstm_count] = 0
             self.lstm_count = new_lstm_count
     def register_grid(self, buffer, tag):
         if self.grid_count:
@@ -404,6 +404,7 @@ class voltnet_training_data_factory():
         shuffle_buffer = np.array(shuffle_buffer, dtype=bool)
         np.random.shuffle(shuffle_buffer)
         norm_mask = np.bitwise_and(shuffle_buffer, np.bitwise_not(vio_mask))
+        print(np.sum(norm_mask))
         return norm_mask
     def open_for_read(self, fname):
         fload = open(fname, 'r')
