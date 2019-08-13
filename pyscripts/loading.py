@@ -371,6 +371,8 @@ class voltnet_training_data_factory():
                 random_vio_count = int(self.grid_size * random_vio_percent)
                 random_vios = np.array([1] * random_vio_count + [0] * (self.grid_size - random_vio_count), dtype=bool)
                 self.register_lstm(vio_mask=random_vios, buffer=buffer, register_pos=False)
+            self.lstm.flush()
+            self.grid.flush()
     def register_lstm(self,  vio_mask, buffer, register_pos=True, register_neg=True):
         if self.lstm_trigger:
             norm_mask = self.select_other_nodes(vio_mask)
@@ -404,7 +406,6 @@ class voltnet_training_data_factory():
         shuffle_buffer = np.array(shuffle_buffer, dtype=bool)
         np.random.shuffle(shuffle_buffer)
         norm_mask = np.bitwise_and(shuffle_buffer, np.bitwise_not(vio_mask))
-        print(np.sum(norm_mask))
         return norm_mask
     def open_for_read(self, fname):
         fload = open(fname, 'r')
@@ -416,13 +417,17 @@ class voltnet_training_data_factory():
         self.grid_size = np.size(example_line)
         if self.lstm_trigger:
             lstm = h5py.File(self.lstm_fsave, "w")
-            self.lstmX = lstm.create_dataset("x", shape=(1, self.trace - self.pred_str, 1), maxshape=(None, self.trace - self.pred_str, 1))
+            self.lstmX = lstm.create_dataset("x", shape=(1, self.trace - self.pred_str, 1), 
+                                            maxshape=(None, self.trace - self.pred_str, 1), 
+                                            chunk=(1, self.trace - self.pred_str, 1))
             self.lstmY = lstm.create_dataset("y", shape=(1,), maxshape=(None,))
         else:
             lstm = None
         if self.grid_trigger:
             grid = h5py.File(self.grid_fsave, "w")
-            self.gridX = grid.create_dataset("x", shape=(1, self.grid_size, self.trace - self.pred_str, 1), maxshape=(None, self.grid_size, self.trace - self.pred_str, 1))
+            self.gridX = grid.create_dataset("x", shape=(1, self.grid_size, self.trace - self.pred_str, 1),
+                                             maxshape=(None, self.grid_size, self.trace - self.pred_str, 1),
+                                             chunk=(1, self.grid_size, self.trace - self.pred_str, 1))
             self.gridY = grid.create_dataset("y", shape=(1,), maxshape=(None,))
         else:
             grid = None
