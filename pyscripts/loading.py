@@ -306,7 +306,7 @@ def generate_prediction_data(file, lines_to_read=0, selected_sensor=[],
 
 class voltnet_training_data_factory():
     def __init__(self, load_flist, lines_to_read=0, 
-                            trace=39, pred_str=5, thres=4, ref=1, global_vio=True, balance=0.5,
+                            trace=39, pred_str=5, thres=4, ref=1, global_vio=True, pos_percent=0.5,
                             grid_trigger=True, grid_fsave="",  lstm_trigger=True, lstm_fsave=""):
         # sanity check
         if grid_trigger and grid_fsave == "":
@@ -324,7 +324,7 @@ class voltnet_training_data_factory():
         self.thres = thres
         self.ref = ref
         self.global_vio = global_vio
-        self.balance = balance
+        self.balance = pos_percent
         self.grid_trigger = grid_trigger
         self.grid_fsave = grid_fsave
         self.lstm_trigger = lstm_trigger
@@ -359,25 +359,32 @@ class voltnet_training_data_factory():
                 norm["counter"] += 1
                 norm["timer"] += self.trace + self.pred_str - 1
                 self.register_grid(buffer, tag=1)
-                self.register_lstm(vios, vio_mask, buffer)
+                self.register_lstm(vio_mask, buffer)
             else:
                 if norm["counter"] != 0: # only update timer if there is a counter.
                     norm["timer"] -= 1
             if norm["timer"] % (self.trace + self.pred_str)==0 and norm["counter"] != 0:
                 norm["counter"] -= 1
                 self.register_grid(buffer, tag=0)
-    def register_lstm(self, vios, vio_mask, buffer):
+                # register random lstm for normal grid
+                random_vio_percent = 0.01
+                random_vio_count = int(self.grid_size * random_vio_percent)
+                random_vios = np.array([1] * random_vio_count + [0] * (self.grid_size - random_vio_count))
+                self.register_lstm(vio_mask=random_vios, buffer=buffer, register_pos=False)
+    def register_lstm(self,  vio_mask, buffer, register_pos=True, register_neg=True):
         if self.lstm_trigger:
             norm_mask = self.select_other_nodes(vio_mask)
             vio_count = np.sum(vio_mask)
             norm_count = np.sum(norm_mask)
-            new_lstm_count = self.lstm_count + vio_count + norm_count
+            new_lstm_count = self.lstm_count + vio_count * int(register_pos) + norm_count * int(register_neg)
             self.lstmX.resize(new_lstm_count, axis=0)
             self.lstmY.resize(new_lstm_count, axis=0)
-            self.lstmX[self.lstm_count:self.lstm_count+vio_count,:,0] = buffer[:self.trace-self.pred_str, vio_mask].T
-            self.lstmY[self.lstm_count:self.lstm_count+vio_count] = 1
-            self.lstmX[self.lstm_count+vio_count:new_lstm_count,:,0] = buffer[:self.trace-self.pred_str, norm_mask].T
-            self.lstmY[self.lstm_count+vio_count:new_lstm_count] = 0
+            if register_pos:
+                self.lstmX[self.lstm_count:self.lstm_count+vio_count,:,0] = buffer[:self.trace-self.pred_str, vio_mask].T
+                self.lstmY[self.lstm_count:self.lstm_count+vio_count] = 1
+            if register_neg:
+                self.lstmX[self.lstm_count+vio_count:new_lstm_count,:,0] = buffer[:self.trace-self.pred_str, norm_mask].T
+                self.lstmY[self.lstm_count+vio_count:new_lstm_count] = 0
             self.lstm_count = new_lstm_count
     def register_grid(self, buffer, tag):
         if self.grid_count:
@@ -404,8 +411,8 @@ class voltnet_training_data_factory():
     def open_for_write(self):
         temp_read = self.open_for_read(self.load_flist[0])
         example_line = self.read_line(temp_read)
-        self.grid_size = np.size(example_line)
         temp_read.close()
+        self.grid_size = np.size(example_line)
         if self.lstm_trigger:
             lstm = h5py.File(self.lstm_fsave, "w")
             self.lstmX = lstm.create_dataset("x", shape=(1, self.trace - self.pred_str, 1), maxshape=(None, self.trace - self.pred_str, 1))

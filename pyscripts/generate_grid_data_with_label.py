@@ -5,6 +5,7 @@ import numpy as np
 from loading import *
 from tensorflow.keras.utils import to_categorical
 import os
+from loading import *
 if os.name == 'nt':
       name = "Yaswan2c_desktop"
       fname = "F:\\Yaswan2c\\Yaswan2c.gridIR"
@@ -24,11 +25,11 @@ else:
 grid_size = 5776
 lstm_samples = 0
 grid_samples = 0
-balance_list = [0.3, 0.25, 0.15, 0.1]
+balance_list = [0.1, 0.15, 0.25, 0.3]
 for balance in balance_list:
       balancing_lstm_save =  lstm_save + "." + str(balance)
       balancing_grid_save =  net_save + "." + str(balance)
-      generator = training_data_factory(f_list,trace=39, ref=1, pred_str=5, thres=4, balance=balance, grid_fsave=balancing_grid_save, lstm_fsave=balancing_lstm_save)
+      generator = voltnet_training_data_factory(f_list,trace=39, ref=1, pred_str=5, thres=4, pos_percent=balance, grid_fsave=balancing_grid_save, lstm_fsave=balancing_lstm_save)
       generator.generate()
 
 # with h5py.File(net_save, 'w') as netF:
