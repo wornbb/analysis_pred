@@ -419,7 +419,7 @@ class voltnet_training_data_factory():
             lstm = h5py.File(self.lstm_fsave, "w")
             self.lstmX = lstm.create_dataset("x", shape=(1, self.trace - self.pred_str, 1), 
                                             maxshape=(None, self.trace - self.pred_str, 1), 
-                                            chunk=(1, self.trace - self.pred_str, 1))
+                                            chunks=(1, self.trace - self.pred_str, 1))
             self.lstmY = lstm.create_dataset("y", shape=(1,), maxshape=(None,))
         else:
             lstm = None
@@ -427,7 +427,7 @@ class voltnet_training_data_factory():
             grid = h5py.File(self.grid_fsave, "w")
             self.gridX = grid.create_dataset("x", shape=(1, self.grid_size, self.trace - self.pred_str, 1),
                                              maxshape=(None, self.grid_size, self.trace - self.pred_str, 1),
-                                             chunk=(1, self.grid_size, self.trace - self.pred_str, 1))
+                                             chunks=(1, self.grid_size, self.trace - self.pred_str, 1))
             self.gridY = grid.create_dataset("y", shape=(1,), maxshape=(None,))
         else:
             grid = None
