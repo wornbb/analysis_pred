@@ -3,40 +3,43 @@ from keras.preprocessing import sequence
 from keras.models import Sequential
 from keras.datasets import imdb
 from keras.utils import to_categorical
+from keras.utils.io_utils import HDF5Matrix
+from keras.callbacks import ModelCheckpoint, CSVLogger
+from keras import regularizers
+
 import pickle
 import tensorflow as tf
 from loading import read_violation
-from keras import regularizers
-from keras.callbacks import ModelCheckpoint, CSVLogger
 import keras as keras
 from clr_callback import*
 import h5py
 import os
+
 fname = "C:\\Users\\Yi\\Desktop\\Yaswan2c\\Yaswan2c.gridIR"
 
-save_fname = r"F:\lstm_data\lstm_2c.h5.0.1"
+save_fname = r"F:\lstm_data\Scaled_lstm_2c.h5.0.1"
 with h5py.File(save_fname,"r") as hf:
-        x = hf["x"][()]
         y= hf["y"][()]
+
+
 # dirty fixing
-x = np.squeeze(x, axis=(2))
-y = y.flatten().astype('int')
-shuffle_index = np.arange(y.shape[0])
-np.random.shuffle(shuffle_index)
-x = x[shuffle_index,:]
-y = y[shuffle_index]
-from sklearn.preprocessing import MinMaxScaler
-scaler = MinMaxScaler(feature_range=(-0.5, 0.5))
-pred_str = 5
-scaled_x = scaler.fit_transform(x[:,:])
-scaled_x = np.expand_dims(scaled_x, axis=2)
-train_size = int(x.shape[0]//8)
-x_train = scaled_x[:train_size,:]
-x_test = scaled_x[train_size:,:]
+# x = np.squeeze(x, axis=(2))
+# y = y.flatten().astype('int')
+# shuffle_index = np.arange(y.shape[0])
+# np.random.shuffle(shuffle_index)
+# x = x[shuffle_index,:]
+# y = y[shuffle_index]
+# from sklearn.preprocessing import MinMaxScaler
+# scaler = MinMaxScaler(feature_range=(-0.5, 0.5))
+# pred_str = 5
+# scaled_x = scaler.fit_transform(x[:,:])
+# scaled_x = np.expand_dims(scaled_x, axis=2)
+train_size = int(y.shape[0]//32)
+x_train = HDF5Matrix(datapath=save_fname, dataset='x',end=train_size)
+x_test = HDF5Matrix(datapath=save_fname, dataset='x',start=train_size, end=int(train_size*1.2))
 
 y_train = y[:train_size]
-y_test = y[train_size:]
-
+y_test = y[train_size:int(train_size*1.2)]
 log_file = 'training_residual.csv'
 try:
     os.remove(log_file)
@@ -75,9 +78,12 @@ for s in range(4,5):
         clr = CyclicLR(base_lr=0.05, max_lr=0.15, mode='triangular2')
         batch_size = 64
         callbacks = [checkpoint, csv_logger]
-        model.fit(x_train, np.array(y_train),
+        print("base acc is:", np.sum(y_train)/train_size)
+
+        model.fit(x_train, y_train,
                 batch_size=batch_size,
-                validation_data=(x_test[::401,:,:],np.array(y_test[::401])),
+                validation_data=(x_test,y_test),
+                shuffle="batch",
                 epochs=15,
                 callbacks=callbacks,
                 verbose=1)

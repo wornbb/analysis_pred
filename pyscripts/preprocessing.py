@@ -84,8 +84,8 @@ if __name__ == "__main__":
         grid_load_fname = "F:\\lstm_data\\VoltNet_2c.h5"
         scaled_grid_save_fname = "F:\\lstm_data\\Scaled_VoltNet_2c.h5"
 
-        lstm_load_fname = "F:\\lstm_data\\lstm_2c.h5.0.1"
-        scaled_lstm_load_fname = "F:\\lstm_data\\Scaled_lstm_2c.h5.0.1"
+        lstm_load_fname = "F:\\lstm_data\\lstm_2c.h5.0.25"
+        scaled_lstm_load_fname = "F:\\lstm_data\\Scaled_lstm_2c.h5.0.25"
 
         lstm_model = 'residual.4.biLSTM.45.10-0.951-0.140.hdf5'
         scaled_load_grid_file = "F:\\lstm_data\\Scaled_VoltNet_2c.h5"
@@ -94,8 +94,8 @@ if __name__ == "__main__":
         grid_load_fname = "/media/yi/yi_final_resort/VoltNet_2c.h5"
         scaled_grid_save_fname = "/media/yi/yi_final_resort/Scaled_VoltNet_2c.h5"
 
-        lstm_load_fname = "/media/yi/yi_final_resort/lstm_2c.h5.0.1"
-        scaled_lstm_load_fname = "/media/yi/yi_final_resort/Scaled_lstm_2c.h5.0.1"
+        lstm_load_fname = "/media/yi/yi_final_resort/lstm_2c.h5.0.25"
+        scaled_lstm_load_fname = "/media/yi/yi_final_resort/Scaled_lstm_2c.h5.0.25"
 
         lstm_model = 'residual.4.biLSTM.45.10-0.951-0.140.hdf5'
         scaled_load_grid_file = "F:/media/yi/yi_final_resort/Scaled_VoltNet_2c.h5"
