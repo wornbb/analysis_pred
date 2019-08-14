@@ -82,14 +82,24 @@ class preScaler():
 if __name__ == "__main__":
     if os.name == 'nt':
         grid_load_fname = "F:\\lstm_data\\VoltNet_2c.h5"
-        scaled_save_fname = "F:\\lstm_data\\Scaled_VoltNet_2c.h5"
+        scaled_grid_save_fname = "F:\\lstm_data\\Scaled_VoltNet_2c.h5"
+
+        lstm_load_fname = "F:\\lstm_data\\lstm_2c.h5.0.1"
+        scaled_lstm_load_fname = "F:\\lstm_data\\Scaled_lstm_2c.h5.0.1"
+
         lstm_model = 'residual.4.biLSTM.45.10-0.951-0.140.hdf5'
         scaled_load_grid_file = "F:\\lstm_data\\Scaled_VoltNet_2c.h5"
         prob_distribution_file = "F:\\lstm_data\\prob_distribution.h5"
     else:
-        load_fname = "/media/yi/yi_final_resort/VoltNet_2c.h5"
-        save_fname = "/media/yi/yi_final_resort/Scaled_VoltNet_2c.h5"
+        grid_load_fname = "/media/yi/yi_final_resort/VoltNet_2c.h5"
+        scaled_grid_save_fname = "/media/yi/yi_final_resort/Scaled_VoltNet_2c.h5"
 
+        lstm_load_fname = "/media/yi/yi_final_resort/lstm_2c.h5.0.1"
+        scaled_lstm_load_fname = "/media/yi/yi_final_resort/Scaled_lstm_2c.h5.0.1"
+
+        lstm_model = 'residual.4.biLSTM.45.10-0.951-0.140.hdf5'
+        scaled_load_grid_file = "F:/media/yi/yi_final_resort/Scaled_VoltNet_2c.h5"
+        prob_distribution_file = "F:/media/yi/yi_final_resort/prob_distribution.h5"
     from PyInquirer import style_from_dict, Token, prompt
     questions = [
         {
@@ -120,10 +130,10 @@ if __name__ == "__main__":
     ]
     answers = prompt(questions)
     if 1 in answers['selection']:
-        grid_processor = preScaler(grid_load_fname,scaled_save_fname)
+        grid_processor = preScaler(grid_load_fname,scaled_grid_save_fname)
         grid_processor.scale_grid_trace()
     if 2 in answers['selection']:
-        grid_processor = preScaler(grid_load_fname, scaled_save_fname)
+        grid_processor = preScaler(lstm_load_fname, scaled_lstm_load_fname)
         grid_processor.sacle_lstm()
     if 3 in answers['selection']:
         prob_generator = lstm_sweep(lstm_model, scaled_load_grid_file, prob_distribution_file)
