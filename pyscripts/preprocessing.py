@@ -87,7 +87,7 @@ if __name__ == "__main__":
         lstm_load_fname = "F:\\lstm_data\\lstm_2c.h5.0.25"
         scaled_lstm_load_fname = "F:\\lstm_data\\Scaled_lstm_2c.h5.0.25"
 
-        lstm_model = 'residual.4.biLSTM.45.10-0.951-0.140.hdf5'
+        lstm_model = 'residual.4.biLSTM.45.12-0.965-0.119.hdf5'
         scaled_load_grid_file = "F:\\lstm_data\\Scaled_VoltNet_2c.h5"
         prob_distribution_file = "F:\\lstm_data\\prob_distribution.h5"
     else:
@@ -140,11 +140,22 @@ if __name__ == "__main__":
         prob_generator.process()
     if 4 in answers['selection']:
         sensor_model = load_model(lstm_model)
-        with h5py.File(save_fname,'r') as f:
-            x = f["x"][()]
-        for node in range(100):
-            pred = sensor_model.predict(x[0,node:node+1,:,0:1])
-            print(pred)
+        # LSTM dataset: positive test
+        with h5py.File(scaled_lstm_load_fname,'r') as f:
+            x = f["x"][:10000,:,:]
+            y = f["y"][:10000]
+        pos_index = (y == 1)
+        pos_x = x[pos_index, :, :]
+        scores = sensor_model.evaluate(pos_x, y[pos_index], verbose=0)
+        print("Accuracy: %.2f%%" % (scores[1]*100))
+        # LSTM dataset: negative test
+        # Grid dataset: overall test
+        with h5py.File(scaled_grid_save_fname,'r') as f:
+            x = f["x"][0,:100,:,:] 
+            for node in range(100): 
+                pred = sensor_model.predict(x[node:node+1,:,0:1])
+                print(pred)
+
 # f_list = [r"balanced_gird_sensor.Yaswan2c_desktop.h5"]
 # with h5py.File(f_list[0], 'r') as f:
 #       x_shape = f["x"].shape

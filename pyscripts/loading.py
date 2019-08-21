@@ -467,7 +467,7 @@ def load_frozen_lstm(model_name):
     sensor_model = load_model(model_name)
     for layer in sensor_model.layers:
         layer.trainable = False
-    sensor_model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['categorical_accuracy'])
+    sensor_model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
     return sensor_model
 def select_other_nodes(selected_nodes, balance=0.5):
     total_positive = np.sum(selected_nodes)

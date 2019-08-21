@@ -1,4 +1,7 @@
-import matplotlib as plt
+import matplotlib.pyplot as plt
+from matplotlib.colors import Normalize
+import seaborn as sns
+import tikzplotlib
 import pickle
 import h5py
 import numpy as np
@@ -7,9 +10,11 @@ import pandas
 from sklearn.metrics import confusion_matrix
 from GLSP import *
 from loading import *
+from pathlib import PureWindowsPath
+import cv2
 class benchmark_factory():
-    def __init__(self, model_fname, data_list, exp_name, mode):
-        self.model_fname = model_fname
+    def __init__(self, model_flist, data_list, exp_name, mode, core=2):
+        self.model_fname = model_flist
         self.data_list = data_list
         self.models = self.load_benchmark_models(model_fname)
         self.loaded_benchmark = 0
@@ -19,12 +24,31 @@ class benchmark_factory():
             self.predictor = self.regression_mode_predict
         elif mode == "neural":
             self.predictor = self.neural_mode_predict
+        
+        if core == 2:
+            self.flp = PureWindowsPath(r"C:\Users\Yi\Desktop\analysis_pred\pyscripts").joinpath("2c.png")
+        elif core == 4:
+            self.flp = PureWindowsPath(r"C:\Users\Yi\Desktop\analysis_pred\pyscripts").joinpath("4c.png")
+        elif core == 16:
+            self.flp = PureWindowsPath(r"C:\Users\Yi\Desktop\analysis_pred\pyscripts").joinpath("16c.png")
         # default parameters
-        self.lines_to_read = 10000
+        self.lines_to_read = 1000
+        # directory magic
+        self.save_prefix = self.exp_name + "." + self.mode 
+        self.latex_fig = PureWindowsPath(r"C:\Users\Yi\Dropbox\Apps\Overleaf\Master Thesis Draft")
     def blank_result(self):
-        result = {"accs":0, "tp":0,"fp":0,"tn":0,"fn":0}
+        """result template
+        
+        Returns:
+            dict -- variable for holding the benchmark result
+                    result = {"acc":0, "tp":0,"fp":0,"tn":0,"fn":0, ["regression_hit", "regression"]}
+                    Before calling "self.finalize_result":
+                        "acc": is a blank placeholder
+                        "regression_acc": is a temporary buffer for holding the correct regression count
+        """
+        result = {"acc":0, "tp":0,"fp":0,"tn":0,"fn":0}
         if self.mode == "regression":
-            result["regression_hit"] = 0
+            result["regression_acc"] = 0
             result["regression_total"] = 0
         return result
     def regression_mode_predict(self, model, x):
@@ -40,13 +64,14 @@ class benchmark_factory():
     def evaluator(self, model, x, y):
         sample_size = x.shape[0]
         result = self.blank_result()
-        for sample in range(sample_size):
+        #self.loaded_model is the prediction strength
+        for sample in range(sample_size - self.loaded_model):
             from_predictor = self.predictor(model, x[sample:sample+1,::2])
             result = self.test_prediction(from_predictor, x, y, sample, result)
         result = self.finalize_result(result)
         return result
     def finalize_result(self, result):
-        result["acc"] = (result["tp"] + result["tn"]) / (result["fp"] + result["fn"])
+        result["acc"] = (result["tp"] + result["tn"]) / (result["fp"] + result["fn"] + result["tp"] + result["tn"])
         if self.mode == "regression":
             result["regression_acc"] = result["regression_acc"] / result["regression_total"]
         return result
@@ -80,6 +105,9 @@ class benchmark_factory():
         result[key] += 1
         return result
     def benchmarking(self):
+        """
+                    result = {"acc":0, "tp":0,"fp":0,"tn":0,"fn":0, ["regression_hit", "regression"]}
+        """
         if type(self.models) is not list:
             self.models = [self.models]
         self.all_evaluations = []
@@ -92,51 +120,90 @@ class benchmark_factory():
                 self.evaluation[dataset] = result
             self.all_evaluations.append(self.evaluation)
             self.loaded_model += 1
-    def generate_avg_acc_plt_data(self):
-        fname = self.exp_name + ".avg_metric_curve.data"
-        plt_data = {"model_order": self.models, "x": range(len(self.models))}
-        all_y = []
+        pickle.dump(self.all_evaluations, open(self.save_prefix + ".all_evaluations",'wb'))
+        #self.all_evaluations = pickle.load(open(self.save_prefix + ".all_evaluations",'rb'))
+        self.generate_acc_tbl()
+        self.generate_avg_acc_plt()
+        self.generate_confusion_matrix()
+        self.generate_sensor_selection()
+    def generate_avg_acc_plt(self):
+        """Generate average accurary plot to compare the performance of multiple models.
+        """
+        model_count = len(self.all_evaluations)
+        avg_acc = np.array([result["acc"] for evaluation in self.all_evaluations for result in evaluation.values()]).reshape(len(self.all_evaluations[0]),-1)
+        #avg_acc = np.mean(avg_acc, axis=1)
+        pred_str = np.arange(model_count)
+
+        # calculating the trend line
+        from sklearn.linear_model import Ridge
+        lr = Ridge()
+        lr.fit(pred_str.reshape(-1,1), avg_acc.reshape(-1,1))
+        plt.bar(pred_str.flatten(), avg_acc.flatten())
+        plt.plot(pred_str.flatten(), (lr.coef_*pred_str+lr.intercept_).flatten(), color='orange')
+        plt.xlabel("Prediction Capability")
+        plt.ylabel("Regression Accurary")
+        tikzplotlib.save(self.latex_fig.joinpath("avg_acc.tex"))
+        plt.close()
+    def generate_acc_tbl(self):
+        fname = "overall_acc_tbl" + ".csv"
+        pred_str_5_evaluation = self.all_evaluations[4]
+        all_y = [result["acc"] for result in pred_str_5_evaluation.values()]
+        df = pandas.DataFrame(np.array(all_y), index=[self.model_fname], columns=[self.data_list])
+        with open(fname, 'a') as f:
+            df.to_csv(f, header=f.tell()==0)
+
+    def generate_sensor_selection(self):
+        num = 1
         for model in self.models:
-            y = []
-            for benchmark in self.benchmarks:
-                score = model.evaluate(benchmark[0], benchmark[1])
-                y.append(score[1])
-            all_y.append(np.mean(y ))
-        plt_data.y = all_y
-        pickle.dump([plt_data, self.model_fname], open(fname, 'wb'))
-    def save_acc_tbl(self):
-        fname = self.exp_name + ".acc_table.data"
-        all_y = []
-        for benchmark in self.benchmarks:
-            y = []
-            for model in self.models:
-                score = model.evaluate(benchmark[0], benchmark[1])
-                y.append(score[1])
-            all_y.append(y)
-        df = pandas.DataFrame(np.array(all_y), index=self.data_list, columns=self.model_fname)
-        with open(fname, 'w') as latex:
-            latex.write(df.to_latex())
-    def generate_sensor_selection_data(self):
-        fname = self.exp_name + ".selected_sensor_grid.data"
-        all_sensors = []
-        for model in self.models:
+            fname = self.latex_fig.joinpath("selected_sensor_grid" + str(num)+".tex")
+            num += 1
             sensors = model.selected_sensors
             dim = len(sensors)
             row = int(np.sqrt(dim))
-            all_sensors.append(sensors.reshape((row, row)))
-        pickle.dump([all_sensors, self.model_list], open(fname, 'wb'))
-    def generate_confusion_matrix_data(self):
-        fname = self.exp_name + ".confusion_matrix.data"
-        all_matrix = []
-        for model in self.models:
-            matrix = np.zeros((2,2))
-            for benchmark in self.benchmarks:
-                y_pred = model.predict(benchmark[0])
-                y_pred = np.argmax(y_pred, axis=-1)
-                y_true = np.argmax(benchmark[1], axis=-1)
-                matrix += confusion_matrix(y_true, y_pred)
-            all_matrix.append(matrix)
-        pickle.dump([all_matrix, self.model_list], open(fname, 'wb'))
+            sensor_map = sensors.reshape((row, row))
+            # rotating the map for view
+            sensor_map = np.flip(sensor_map, axis=0)
+
+        # prepare for plotting flp
+            # read flp img
+            flp = plt.imread(str(self.flp))
+            # set up alpha channel for tranparency
+            alphas = Normalize(0, .3, clip=True)(np.abs(np.sum(flp, axis=-1)))
+            alphas = np.ones_like(alphas) - np.clip(alphas, .6, 1)  # alpha value clipped at the bottom at .4
+            flp = np.dstack([flp, alphas])
+        # prepare for plotting selected sensor
+            # create rgb space for hosting the sensor map
+            drawing = np.ones(shape=(sensor_map.shape)+(3,))
+            # set selected sensor to be red
+            drawing[:,:,0] = sensor_map
+            drawing[:,:,1] = np.bitwise_not(sensor_map)
+            drawing[:,:,2] = np.bitwise_not(sensor_map)
+            # resize sensor map
+            drawing = cv2.resize(drawing, dsize=flp.shape[:2], interpolation=cv2.INTER_NEAREST)
+        # ploting
+            plt.imshow(drawing)
+            plt.imshow(flp)
+            tikzplotlib.save(fname)
+            plt.close()
+    def generate_confusion_matrix(self):
+        cfm = np.zeros(shape=(2,2))
+        # take the evaluation where pred_str = 5
+
+        pred_str_5_evaluation = self.all_evaluations[4]
+        for benchmark_result in pred_str_5_evaluation.values():
+            cfm[0,0] += benchmark_result["tp"]
+            cfm[0,1] += benchmark_result["fp"]
+            cfm[1,0] += benchmark_result["fn"]
+            cfm[1,1] += benchmark_result["tn"]
+        cfm_df = pd.DataFrame(cfm,index=["Positive", "Negative"],columns=["Positive", "Negative"])      
+        cfm_df.index.name = 'Actual'
+        cfm_df.columns.name = 'Predicted'
+        #fig, ax = plt.subplots()
+        plt.figure(figsize=(10,6))
+        sns.heatmap(cfm_df, annot=True, fmt='')        
+        tikzplotlib.save(self.latex_fig.joinpath("confusion_matrix.tex"))
+        plt.close()
+
     def load_benchmark_models(self, model_fname):
         #self.models = []
         #for fname in model_list:
@@ -147,11 +214,12 @@ class benchmark_factory():
         self.models= saved_model
         return self.models
     def load_benchmark_data(self, fname):
+        """ loaded data should have shapes (samples, nodes)"""
         if fname.endswith(".h5"):
             with h5py.File(fname, 'r') as f:
-                x = f["x"][()]
-                tag = f["y"][()]
-                tag = tag < 1.5
+                x = f["x"][:self.lines_to_read,:]
+                tag = f["y"][:self.lines_to_read]
+            
         elif fname.endswith(".gridIR"):
             loader = regression_training_data_factory([fname], lines_to_read=self.lines_to_read)
             [x, tag] = loader.generate()

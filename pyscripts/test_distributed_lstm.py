@@ -52,7 +52,7 @@ import os
 #             sample_count = new_sample_count
 #             print(fname)
 prob_distribution = 'F:\\lstm_data\\prob_distribution.h5'
-train_size = 10000
+train_size = 20000
 test_size = 1000
 x_train = HDF5Matrix(datapath=prob_distribution, dataset='x', start=0, end=train_size)
 x_test = HDF5Matrix(datapath=prob_distribution, dataset='x', start=train_size, end=train_size+test_size)
@@ -103,7 +103,7 @@ model.fit(x_train, y_train,
                   #ModelCheckpoint(filepath, monitor='val_categorical_accuracy',save_best_only=True, verbose=1, mode='max'),
 output_weights = model.layers[-1].get_weights()[0]
 weight_norm = np.linalg.norm(output_weights, axis=1)
-pickle.dump(weight_norm, open('weight_norm.pk','wb'))
+#pickle.dump(weight_norm, open('weight_norm.pk','wb'))
 # selected_sensors = weight_norm > 0.1
 # x_train = x_train[:,selected_sensors]
 # x_test = x_test[:, selected_sensors]

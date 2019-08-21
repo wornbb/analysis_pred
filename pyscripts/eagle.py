@@ -6,6 +6,7 @@ from sklearn.linear_model import LinearRegression
 from sklearn.ensemble import BaggingRegressor
 from sklearn.metrics import make_scorer, mean_squared_error
 import matplotlib.pyplot as plt
+from pathlib import PureWindowsPath
 def eagle_eye(occurrence, budget ,placement=[])->list:
     """vanilla eagle eye algorithm. 
     
@@ -44,7 +45,7 @@ class ee_sensor_selector():
          self.flp = flp
          self.segment_trigger = segment_trigger
          self.raw_placement = []
-         self.placement = np.zeros(grid_size, dtype=int)
+         self.placement = np.zeros(grid_size, dtype=bool)
     def train(self, training_data):
         self.umap = self.get_mask(self.flp, self.grid_size)
         for unit_plan in self.placement_plan:
@@ -168,12 +169,13 @@ class ee_sensor_selector():
     def predict(self):
         for node in self.raw_placement:
             [row, col] = np.fromstring(node, dtype=int, sep=',')
-            self.placement[row *int(np.sqrt(self.grid_size)) + col] = 1
+            self.placement[row *int(np.sqrt(self.grid_size)) + col] = True
         return self.placement
 class ee_model():
-    def __init__(self, flp_fname, gridIR, segment_trigger=True, placement_mode="uniform", placement_para=1):
+    def __init__(self, flp_fname, gridIR, pred_str=1, segment_trigger=True, placement_mode="uniform", placement_para=1):
         self.flp_fname = flp_fname
         self.girdIR = gridIR
+        self.pred_str = pred_str
         self.segment_trigger = segment_trigger
         self.placement_mode = placement_mode
         self.placement_para = placement_para
@@ -182,7 +184,7 @@ class ee_model():
             self.placer = self.uniform_placement
         # loading
         self.flp = self.load_flp()
-        [self.training_data, self.grid_size] = read_violation(gridIR, lines_to_read=10000, trace=10)
+        [self.training_data, self.grid_size] = read_violation(gridIR, lines_to_read=6000, trace=10)
         # init key components
         self.placement_plan = self.generate_placement_plan()
         self.selector = ee_sensor_selector(self.flp, self.placement_plan, self.grid_size, self.segment_trigger)
@@ -208,12 +210,13 @@ class ee_model():
         return flp
     def init_predicor(self):
         self.predictor = BaggingRegressor(base_estimator=LinearRegression(), n_estimators=5, n_jobs=6)
-    def fit(self, x, y):
+    def fit(self, data):
         # sensor selection
         self.selector.train(self.training_data)
         self.selected_sensors = self.selector.predict()
         # data filtering
-        self.selected_x = x[:,self.selected_sensors]
+        self.selected_x = data[self.selected_sensors,:-self.pred_str].T
+        y = data[np.bitwise_not(self.selected_sensors),self.pred_str:].T 
         self.predictor.fit(X=self.selected_x, y=y)
     def predict(self, x):
         x = x[:,self.selected_sensors]
@@ -253,27 +256,33 @@ class ee_model():
             col = np.random.randint(miny, miny + y_range)
             flp_img[miny:miny+y_range,minx:minx+x_range] = color
             color += 1
-        plt.imshow(flp_img)
+        plt.imshow(np.flip(flp_img, axis=0))
         plt.colorbar()
         plt.show() 
     def show_sensors(self):
         row = int(np.sqrt(self.grid_size))
         grid = self.selected_sensors.reshape((row,row))
-        plt.imshow(np.flip(grid, axis=0))
+        plt.imshow(np.flip(grid, axis=0).astype(int))
         plt.colorbar()
         plt.show()
 if __name__ == "__main__":
-
+    core = 2
+    if core == 2:
+        fname = PureWindowsPath(r"C:\Users\Yi\Desktop\analysis_pred\pyscripts").joinpath("Penryn22_ruby_ya_2c_v13.flp")
+    elif core == 4:
+        fname = PureWindowsPath(r"C:\Users\Yi\Desktop\analysis_pred\pyscripts").joinpath("Penryn22_ruby_ya_4c_v13.flp")
+    elif core == 16:
+        fname = PureWindowsPath(r"C:\Users\Yi\Desktop\analysis_pred\pyscripts").joinpath("Penryn22_ruby_ya_16c_v13.flp")
     gridIR = "F:\\Yaswan2c\\Yaswan2c.gridIR"
-    fname = r"C:\Users\Yi\Desktop\Software reference\VoltSpot-2.0\example.flp"
-    ee_test = ee_model(flp_fname=fname, gridIR=gridIR)
     data = read_volt_grid(gridIR, 40)
-    pred_str = 5
-    x_train = data[::2,:-pred_str].T
-    y_train = data[1::2,pred_str:].T
-    ee_test.fit(x_train,y_train)
-    ee_test.show_flp()
-    ee_test.show_sensors()
+    models = []
+    for pred_str in range(5):
+        pred_str += 1
+        ee_test = ee_model(flp_fname=fname, gridIR=gridIR, pred_str=pred_str)
+        ee_test.fit(data)
+        models.append(ee_test)
+    import pickle
+    pickle.dump(models, open("ee.model", "wb"))
     # maxlen = 5000
     # start_line = 10000
     # (occurrence, dim) = read_violation(gridIR, 100000, trace=10)

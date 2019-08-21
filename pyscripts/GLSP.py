@@ -1,14 +1,19 @@
-from sklearn.linear_model import Lasso, LinearRegression
-from sklearn.cluster import KMeans
-from sklearn.model_selection import GridSearchCV
-from sklearn.ensemble import BaggingRegressor
 import numpy as np
 import pandas as pd
+from sklearn.cluster import KMeans
+from sklearn.ensemble import BaggingRegressor
+from sklearn.linear_model import Lasso, LassoCV, LinearRegression
 from sklearn.metrics import make_scorer, mean_squared_error
-from loading import read_volt_grid
+from sklearn.model_selection import GridSearchCV
 from sklearn.preprocessing import StandardScaler
+
+from loading import read_volt_grid
+
+
 class gl_model():
-    def init_selector(self, alpha=1.0, fit_intercept=True, normalize=False,
+    def __init__(self, pred_str):
+        self.pred_str = pred_str
+    def init_selector(self, pred_str=1,alpha=1.0, fit_intercept=True, normalize=False,
                  precompute=False, copy_X=True, max_iter=1000,
                  tol=1e-4, warm_start=False, positive=False,
                  random_state=None, selection='cyclic'):
@@ -19,22 +24,24 @@ class gl_model():
             selection=selection)
     def init_predicor(self):
         self.predictor = BaggingRegressor(base_estimator=LinearRegression(), n_estimators=5, n_jobs=6)
-    def fit(self, x, y):
-        start = 10
-        end = 100
-        jump = 20
-        parameters = {'alpha':np.arange(start, end, jump) / (2*y.shape[0])}
+    def fit(self, data_train):
+        x = data_train[::2,:-self.pred_str].T
+        y = data_train[1::2,self.pred_str:].T
+        parameters = {'alpha':np.arange(0.05, 1, 0.05)}
         # sensor selection
         self.init_selector(max_iter=10000,fit_intercept=False,positive=True)
         self.init_predicor()
         score_correlation = make_scorer(loss_correlation, greater_is_better=False)
         score_sensor_count = make_scorer(loss_sensor_count)
-        self.cv = GridSearchCV(self.selector, parameters, cv=2, refit= 'correlation', scoring={'correlation':score_correlation, 'count':score_sensor_count})
+        self.cv = GridSearchCV(self.selector, parameters, cv=2, refit= 'correlation', scoring={'correlation':score_correlation, 'count':score_sensor_count}, n_jobs=6)
         self.cv.fit(X=y, y=x)
-        self.selected_sensors = self.cv.best_estimator_.predict(0)
+        self.sensor_map = self.cv.best_estimator_.predict(0)
+        self.selected_sensors = np.zeros(shape=data_train.shape[0], dtype=bool)
+        self.selected_sensors[::2] = self.sensor_map
         # data filtering
-        self.selected_x = x[:,self.selected_sensors]
-        self.predictor.fit(X=self.selected_x, y=y)
+        self.selected_x = data_train[self.selected_sensors,:-self.pred_str].T
+        other_y = data_train[np.bitwise_not(self.selected_sensors), self.pred_str:].T
+        self.predictor.fit(X=self.selected_x, y=other_y)
     def predict(self, x):
         x = x[:,self.selected_sensors]
         return self.predictor.predict(x)
@@ -88,7 +95,7 @@ def loss_correlation(y_true, selected):
     mask[np.triu_indices(len(corrmat))] = False
     z_trans = np.arctan(corrmat.values)
     z_mean  = np.mean(np.absolute(z_trans))
-    return np.tanh(z_mean)
+    return np.abs(np.tanh(z_mean))
 
 
 if __name__ == "__main__":
@@ -97,11 +104,9 @@ if __name__ == "__main__":
     data = read_volt_grid(fname, n)
     [data_test, data_train] = np.split(data,2,axis=1)
     models = []
-    for pred_str in range(8):
+    for pred_str in range(5):
         pred_str += 1
-        x_train = data_train[::2,:-pred_str].T
-        y_train = data_train[1::2,pred_str:].T
-        glsp = gl_model()
-        glsp.fit(x_train, y_train)
+        glsp = gl_model(pred_str=pred_str)
+        glsp.fit(data_train)
         models.append(glsp)
     print('a')

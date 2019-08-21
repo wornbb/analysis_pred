@@ -26,11 +26,17 @@ grid_size = 5776
 lstm_samples = 0
 grid_samples = 0
 balance_list = [0.1, 0.15, 0.25, 0.3]
-for balance in balance_list:
-      balancing_lstm_save =  lstm_save + "." + str(balance)
-      balancing_grid_save =  net_save + "." + str(balance)
-      generator = voltnet_training_data_factory(f_list,trace=39, ref=1, pred_str=5, thres=4, pos_percent=balance, grid_fsave=balancing_grid_save, lstm_fsave=balancing_lstm_save)
-      generator.generate()
+# generating data for regression weakness plot
+balancing_grid_save =  dump + "overall_regression_testing.h5"
+generator = voltnet_training_data_factory(f_list,trace=10, ref=1, pred_str=0, thres=4, pos_percent=0.5, grid_fsave=balancing_grid_save, lstm_trigger=False)
+generator.generate()
+
+# This is for generating normal data for training voltnet
+# for balance in balance_list:
+#       balancing_lstm_save =  lstm_save + "." + str(balance)
+#       balancing_grid_save =  net_save + "." + str(balance)
+#       generator = voltnet_training_data_factory(f_list,trace=39, ref=1, pred_str=5, thres=4, pos_percent=balance, grid_fsave=balancing_grid_save, lstm_fsave=balancing_lstm_save)
+#       generator.generate()
 
 # with h5py.File(net_save, 'w') as netF:
 #       netX = netF.create_dataset('x', shape=(1, grid_size, 34, 1), maxshape=(None, grid_size, 34, 1))

@@ -6,6 +6,7 @@ from keras.utils import to_categorical
 from keras.utils.io_utils import HDF5Matrix
 from keras.callbacks import ModelCheckpoint, CSVLogger
 from keras import regularizers
+from keras.layers import Dense,merge, Dropout,Add, LSTM, Bidirectional, BatchNormalization, Input, Permute
 
 import pickle
 import tensorflow as tf
@@ -47,7 +48,6 @@ except:
     pass
 csv_logger = CSVLogger(log_file, append=True)
 rnn_dropout = 0.4
-from keras.layers import Dense,merge, Dropout,Add, LSTM, Bidirectional, BatchNormalization, Input, Permute
 m = 32
 for s in range(4,5):
     for n in range(45,46,10):
@@ -70,13 +70,14 @@ for s in range(4,5):
         # node = BatchNormalization()(node)
         prediction = Dense(1, activation='sigmoid', kernel_initializer='random_uniform', bias_initializer='zeros')(node)
         model = keras.models.Model(inputs=inputs, outputs=prediction)
+        rmsprop = keras.optimizers.rmsprop(lr=0.005)
         model.compile(loss='binary_crossentropy', optimizer='rmsprop', metrics=['accuracy'])
         model.summary()
         print('Train...')
         filepath = "residual." + str(s) + ".biLSTM." + str(n) + ".{epoch:02d}-{val_acc:.3f}-{val_loss:.3f}.hdf5"
         checkpoint = ModelCheckpoint(filepath, monitor='val_acc',save_best_only=True, verbose=1, mode='max')
         clr = CyclicLR(base_lr=0.05, max_lr=0.15, mode='triangular2')
-        batch_size = 64
+        batch_size = 128
         callbacks = [checkpoint, csv_logger]
         print("base acc is:", np.sum(y_train)/train_size)
 
