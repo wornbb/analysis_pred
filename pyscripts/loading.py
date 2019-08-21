@@ -371,8 +371,10 @@ class voltnet_training_data_factory():
                 random_vio_count = int(self.grid_size * random_vio_percent)
                 random_vios = np.array([1] * random_vio_count + [0] * (self.grid_size - random_vio_count), dtype=bool)
                 self.register_lstm(vio_mask=random_vios, buffer=buffer, register_pos=False)
-            self.lstm.flush()
-            self.grid.flush()
+            if self.lstm_trigger:
+                self.lstm.flush()
+            if self.grid_trigger:
+                self.grid.flush()
     def register_lstm(self,  vio_mask, buffer, register_pos=True, register_neg=True):
         if self.lstm_trigger:
             norm_mask = self.select_other_nodes(vio_mask)
