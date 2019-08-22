@@ -145,7 +145,7 @@ class benchmark_factory():
         fname = "overall_acc_tbl" + ".csv"
         pred_str_5_evaluation = self.all_evaluations[4]
         all_y = [result["acc"] for result in pred_str_5_evaluation.values()]
-        df = pandas.DataFrame(np.array(all_y), index=[self.model_fname], columns=[self.data_list])
+        df = pandas.DataFrame(np.array(all_y).reshape(1,-1), index=[self.model_fname], columns=[self.data_list])
         with open(fname, 'a') as f:
             df.to_csv(f, header=f.tell()==0)
 
