@@ -62,7 +62,7 @@ class benchmark_factory():
         result = self.blank_result()
         #self.loaded_model is the prediction strength
         for sample in range(sample_size - self.loaded_model):
-            from_predictor = self.predictor(model, x[sample:sample+1,::2])
+            from_predictor = self.predictor(model, x[sample:sample+1,:])
             result = self.test_prediction(from_predictor, x, y, sample, result)
         result = self.finalize_result(result)
         return result
