@@ -12,11 +12,12 @@ from GLSP import *
 from loading import *
 from pathlib import PureWindowsPath
 import cv2
+import os
 class benchmark_factory():
-    def __init__(self, model_flist, data_list, exp_name, mode, core=2):
+    def __init__(self, model_flist, data_list, exp_name, mode, flp):
         self.model_fname = model_flist
         self.data_list = data_list
-        self.models = self.load_benchmark_models(model_fname)
+        self.models = self.load_benchmark_models(model_flist)
         self.loaded_benchmark = 0
         self.exp_name = exp_name
         self.mode = mode
@@ -24,18 +25,13 @@ class benchmark_factory():
             self.predictor = self.regression_mode_predict
         elif mode == "neural":
             self.predictor = self.neural_mode_predict
-        
-        if core == 2:
-            self.flp = PureWindowsPath(r"C:\Users\Yi\Desktop\analysis_pred\pyscripts").joinpath("2c.png")
-        elif core == 4:
-            self.flp = PureWindowsPath(r"C:\Users\Yi\Desktop\analysis_pred\pyscripts").joinpath("4c.png")
-        elif core == 16:
-            self.flp = PureWindowsPath(r"C:\Users\Yi\Desktop\analysis_pred\pyscripts").joinpath("16c.png")
+        self.flp = flp
+
         # default parameters
         self.lines_to_read = 1000
         # directory magic
         self.save_prefix = self.exp_name + "." + self.mode 
-        self.latex_fig = PureWindowsPath(r"C:\Users\Yi\Dropbox\Apps\Overleaf\Master Thesis Draft")
+        self.latex_fig = PureWindowsPath(r"./figs")
     def blank_result(self):
         """result template
         
@@ -230,8 +226,34 @@ class benchmark_factory():
         return [x, tag.astype('int')]
 
 if __name__ == "__main__":
+    if os.name == "nt":
+        core = 2
+        if core == 2:
+            flp = PureWindowsPath(r"C:\Users\Yi\Desktop\analysis_pred\pyscripts").joinpath("2c.png")
+        elif core == 4:
+            flp = PureWindowsPath(r"C:\Users\Yi\Desktop\analysis_pred\pyscripts").joinpath("4c.png")
+        elif core == 16:
+            flp = PureWindowsPath(r"C:\Users\Yi\Desktop\analysis_pred\pyscripts").joinpath("16c.png")
+        f_list = [r"F:\\Yaswan2c\\Yaswan2c.gridIR"]
+        
+    else:
+        core = 2
+        if core == 2:
+            flp = PureWindowsPath(r".").joinpath("2c.png")
+        elif core == 4:
+            flp = PureWindowsPath(r".").joinpath("4c.png")
+        elif core == 16:
+            flp = PureWindowsPath(r".").joinpath("16c.png")
+        f_list = [
+        "/data/yi/voltVio/analysis/raw/" + "blackscholes2c" + ".gridIR",
+        "/data/yi/voltVio/analysis/raw/" + "bodytrack2c" + ".gridIR",
+        "/data/yi/voltVio/analysis/raw/" + "freqmine2c"+ ".gridIR",
+        "/data/yi/voltVio/analysis/raw/" + "facesim2c"+ ".gridIR",
+        ]
     #data_list = [r"VoltNet_2c.h5"]
-    data_list = [r"F:\\Yaswan2c\\Yaswan2c.gridIR"]
-    gp_models = "models_correct_score"
-    gp_benchmark = benchmark_factory(gp_models, data_list,exp_name="gp",mode="regression")
+    gp_models = "gl.model"
+    gp_benchmark = benchmark_factory(gp_models, f_list,flp=flp, exp_name="gp",mode="regression")
     gp_benchmark.benchmarking()
+    ee_models = "ee.model"
+    ee_benchmark = benchmark_factory(ee_models, f_list,flp=flp, exp_name="ee",mode="regression")
+    ee_benchmark.benchmarking()
