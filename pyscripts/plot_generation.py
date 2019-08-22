@@ -79,7 +79,7 @@ class benchmark_factory():
             # dirty fixing
             pred_str = self.loaded_model
             # regression benchmarking
-            target = x[sample + pred_str,1::2]
+            target = x[sample + pred_str,np.bitwise_not(self.selected_sensors)]
             error = np.absolute(regression - target)
             diff = error / regression
             max_diff = np.amax(diff)
@@ -110,6 +110,7 @@ class benchmark_factory():
         self.evaluation = dict.fromkeys(self.data_list)
         self.loaded_model = 0
         for model in self.models:
+            self.selected_sensors = model.selected_sensors
             for dataset in self.data_list:
                 benchmark = self.load_benchmark_data(dataset)
                 result = self.evaluator(model, benchmark[0], benchmark[1])
