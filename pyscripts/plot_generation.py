@@ -129,7 +129,7 @@ class benchmark_factory():
         model_count = len(self.all_evaluations)
         avg_acc = np.array([result["acc"] for evaluation in self.all_evaluations for result in evaluation.values()]).reshape(len(self.all_evaluations[0]),-1)
         if avg_acc.ndim > 1:
-            avg_acc = np.mean(avg_acc, axis=1)
+            avg_acc = np.mean(avg_acc, axis=0)
         pred_str = np.arange(model_count)
 
         # calculating the trend line
