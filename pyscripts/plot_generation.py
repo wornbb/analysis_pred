@@ -29,7 +29,7 @@ class benchmark_factory():
         self.flp = flp
 
         # default parameters
-        self.lines_to_read = 1000
+        self.lines_to_read = 10000
         # directory magic
         self.save_prefix = self.exp_name + "." + self.mode 
         self.latex_fig = PureWindowsPath(r"./figs")
@@ -254,9 +254,9 @@ if __name__ == "__main__":
         "/data/yi/voltVio/analysis/raw/" + "facesim2c"+ ".gridIR",
         ]
     #data_list = [r"VoltNet_2c.h5"]
-    #gp_models = "gl.model"
-    #gp_benchmark = benchmark_factory(gp_models, f_list,flp=flp, exp_name="gp",mode="regression")
-    #gp_benchmark.benchmarking()
+    gp_models = "gl.model"
+    gp_benchmark = benchmark_factory(gp_models, f_list,flp=flp, exp_name="gp",mode="regression")
+    gp_benchmark.benchmarking()
     ee_models = "ee.model"
     ee_benchmark = benchmark_factory(ee_models, f_list,flp=flp, exp_name="ee",mode="regression")
     ee_benchmark.benchmarking()
