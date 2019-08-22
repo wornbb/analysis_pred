@@ -9,6 +9,7 @@ from keras.utils import to_categorical
 import pandas
 from sklearn.metrics import confusion_matrix
 from GLSP import *
+from eagle import *
 from loading import *
 from pathlib import PureWindowsPath
 import cv2
@@ -253,9 +254,9 @@ if __name__ == "__main__":
         "/data/yi/voltVio/analysis/raw/" + "facesim2c"+ ".gridIR",
         ]
     #data_list = [r"VoltNet_2c.h5"]
-    gp_models = "gl.model"
-    gp_benchmark = benchmark_factory(gp_models, f_list,flp=flp, exp_name="gp",mode="regression")
-    gp_benchmark.benchmarking()
+    #gp_models = "gl.model"
+    #gp_benchmark = benchmark_factory(gp_models, f_list,flp=flp, exp_name="gp",mode="regression")
+    #gp_benchmark.benchmarking()
     ee_models = "ee.model"
     ee_benchmark = benchmark_factory(ee_models, f_list,flp=flp, exp_name="ee",mode="regression")
     ee_benchmark.benchmarking()
