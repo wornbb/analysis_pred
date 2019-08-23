@@ -142,7 +142,8 @@ class benchmark_factory():
         plt.plot(pred_str.flatten(), (lr.coef_*pred_str+lr.intercept_).flatten(), color='orange')
         plt.xlabel("Prediction Capability")
         plt.ylabel("Regression Accurary")
-        tikzplotlib.save(self.latex_fig.joinpath(self.save_prefix+".avg_acc.tex"))
+        #tikzplotlib.save(self.latex_fig.joinpath(self.save_prefix+".avg_acc.tex"))
+        plt.savefig(self.latex_fig.joinpath(self.save_prefix+".avg_acc.pdf"))
         plt.close()
     def generate_acc_tbl(self):
         fname = "overall_acc_tbl" + ".csv"
@@ -154,7 +155,7 @@ class benchmark_factory():
     def generate_sensor_selection(self):
         num = 1
         for model in self.models:
-            fname = self.latex_fig.joinpath(self.save_prefix+".selected_sensor_grid" + str(num)+".tex")
+            fname = self.latex_fig.joinpath(self.save_prefix+".selected_sensor_grid" + str(num)+".pdf")
             num += 1
             sensors = model.selected_sensors
             dim = len(sensors)
@@ -182,7 +183,8 @@ class benchmark_factory():
         # ploting
             plt.imshow(drawing)
             plt.imshow(flp)
-            tikzplotlib.save(fname)
+            #tikzplotlib.save(fname)
+            plt.savefig(fname)
             plt.close()
     def generate_confusion_matrix(self):
         cfm = np.zeros(shape=(2,2))
@@ -198,7 +200,8 @@ class benchmark_factory():
         cfm_df.index.name = 'Actual'
         cfm_df.columns.name = 'Predicted'
         pretty_plot_confusion_matrix(cfm_df)      
-        tikzplotlib.save(self.latex_fig.joinpath(self.save_prefix+".confusion_matrix.tex"))
+        #tikzplotlib.save(self.latex_fig.joinpath(self.save_prefix+".confusion_matrix.tex"))
+        plt.savefig(self.latex_fig.joinpath(self.save_prefix+".confusion_matrix.pdf"))
         plt.close()
     def load_benchmark_models(self, model_fname):
         #self.models = []
