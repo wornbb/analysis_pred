@@ -49,12 +49,14 @@ def get_violation(data, occurrence=np.array([],dtype=np.double), ref=1, thres=4,
                       When mode = n where n is not 0, it returns a voltage trace with length of n time points.
         reverse {bool} -- Default: False. When set to true, it will return the coordinate of non-voltage violation node instead
     Returns:
-        np.ndarray -- The info of each violation is stored in a column.
+        occurrence -- The info of each violation is stored in a column.
                       Within the column, the info is ordered as 
                       [x coordinate, y coordinate, column number in "data", value of the node]
                       note, x coor is the column number, y coor is the row number
                    -- In the case of Trace mode, the column of output will be:
                       [x coor, y coor, column number in "data", values of the trace with the most recent value on top]
+                      
+        vios_record -- A list of np boolean array
     """
     gird_size = data.shape[0]
     dim = int(np.sqrt(gird_size)) # This has to be a square gird

@@ -147,7 +147,7 @@ def pretty_plot_confusion_matrix(df_cm, annot=True, cmap="Oranges", fmt='.2f', f
     else:
         xlbl = 'Actual'
         ylbl = 'Predicted'
-        df_cm = df_cm.T
+        #df_cm = df_cm.T
 
     # create "Total" column
     insert_totals(df_cm)

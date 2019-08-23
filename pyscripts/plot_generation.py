@@ -50,7 +50,7 @@ class benchmark_factory():
             result["regression_total"] = 0
         return result
     def regression_mode_predict(self, model, x):
-        regression = model.predict(x[::2,:])
+        regression = model.predict(x)
         violation = np.bitwise_and(regression >= 1.04, regression <= 0.96)
         if violation.any():
             prediction = 1
@@ -79,9 +79,8 @@ class benchmark_factory():
             prediction = from_predictor[0]
             regression = from_predictor[1]
             # dirty fixing
-            pred_str = self.loaded_model
             # regression benchmarking
-            target = x[sample + pred_str,np.bitwise_not(self.selected_sensors)]
+            target = x[sample + self.pred_str,np.bitwise_not(self.selected_sensors)]
             error = np.absolute(regression - target)
             diff = error / regression
             max_diff = np.amax(diff)
@@ -196,13 +195,11 @@ class benchmark_factory():
             cfm[0,1] += benchmark_result["fp"]
             cfm[1,0] += benchmark_result["fn"]
             cfm[1,1] += benchmark_result["tn"]
-        cfm_df = pd.DataFrame(cfm)
-        #cfm_df = pd.DataFrame(cfm,index=["Positive", "Negative"],columns=["Positive", "Negative"])      
+        cfm_df = pd.DataFrame(cfm,index=["Positive", "Negative"],columns=["Positive", "Negative"])      
         # cfm_df.index.name = 'Actual'
         # cfm_df.columns.name = 'Predicted'
         pretty_plot_confusion_matrix(cfm_df)      
         #tikzplotlib.save(self.latex_fig.joinpath(self.save_prefix+".confusion_matrix.tex"))
-        plt.show()
         plt.savefig(self.latex_fig.joinpath(self.save_prefix+".confusion_matrix.pdf"))
         plt.close()
     def load_benchmark_models(self, model_fname):
@@ -232,8 +229,8 @@ class benchmark_factory():
     def benchmark_from_ckp(self, ckp_list):
         for ckp in ckp_list:
             self.all_evaluations = pickle.load(open(ckp,'rb'))
-            #self.generate_acc_tbl()
-            #self.generate_avg_acc_plt()
+            self.generate_acc_tbl()
+            self.generate_avg_acc_plt()
             self.generate_confusion_matrix()
             self.generate_sensor_selection()
 if __name__ == "__main__":
