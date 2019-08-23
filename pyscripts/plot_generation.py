@@ -151,7 +151,6 @@ class benchmark_factory():
         df = pandas.DataFrame(np.array(all_y).reshape(1,-1), index=[self.model_fname], columns=[self.data_list])
         with open(fname, 'a') as f:
             df.to_csv(f, header=f.tell()==0)
-
     def generate_sensor_selection(self):
         num = 1
         for model in self.models:
@@ -201,7 +200,6 @@ class benchmark_factory():
         pretty_plot_confusion_matrix(cfm_df)      
         tikzplotlib.save(self.latex_fig.joinpath(self.save_prefix+".confusion_matrix.tex"))
         plt.close()
-
     def load_benchmark_models(self, model_fname):
         #self.models = []
         #for fname in model_list:
@@ -226,7 +224,13 @@ class benchmark_factory():
         else:
             print("undefined file type to load")
         return [x, tag.astype('int')]
-
+    def benchmark_from_ckp(self, ckp_list):
+        for ckp in ckp_list:
+            self.all_evaluations = pickle.load(open(ckp,'rb'))
+            self.generate_acc_tbl()
+            self.generate_avg_acc_plt()
+            self.generate_confusion_matrix()
+            self.generate_sensor_selection()
 if __name__ == "__main__":
     if os.name == "nt":
         core = 2
@@ -255,7 +259,9 @@ if __name__ == "__main__":
     #data_list = [r"VoltNet_2c.h5"]
     gp_models = "gl.model"
     gp_benchmark = benchmark_factory(gp_models, f_list,flp=flp, exp_name="gp",mode="regression")
-    gp_benchmark.benchmarking()
+    gp_benchmark.benchmark_from_ckp(ckp_list="gp.regression.all_evaluations")
+    #gp_benchmark.benchmarking()
     ee_models = "ee.model"
     ee_benchmark = benchmark_factory(ee_models, f_list,flp=flp, exp_name="ee",mode="regression")
-    ee_benchmark.benchmarking()
+    ee_benchmark.benchmark_from_ckp(ckp_list="ee.regression.all_evaluations")
+    #ee_benchmark.benchmarking()
