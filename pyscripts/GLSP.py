@@ -13,8 +13,8 @@ from loading import read_volt_grid
 class gl_model():
     def __init__(self, pred_str=0, target_sensor_count=False):
         self.pred_str = pred_str
-        if target_sensor_count:
-            self.target_sensor_count = target_sensor_count
+        
+        self.target_sensor_count = target_sensor_count
     def init_selector(self,alpha=1.0, fit_intercept=True, normalize=False,
                  precompute=False, copy_X=True, max_iter=1000,
                  tol=1e-4, warm_start=False, positive=False,
@@ -35,7 +35,10 @@ class gl_model():
         self.init_predicor()
         score_correlation = make_scorer(self.loss_correlation, greater_is_better=False)
         score_sensor_count = make_scorer(self.loss_sensor_count, greater_is_better=False)
-        self.cv = GridSearchCV(self.selector, parameters, cv=2, refit= 'correlation', scoring={'correlation':score_correlation, 'count':score_sensor_count}, n_jobs=6)
+        if self.target_sensor_count:
+            self.cv = GridSearchCV(self.selector, parameters, cv=2, refit= 'count', scoring={'correlation':score_correlation, 'count':score_sensor_count}, n_jobs=6)
+        else:
+            self.cv = GridSearchCV(self.selector, parameters, cv=2, refit= 'correlation', scoring={'correlation':score_correlation, 'count':score_sensor_count}, n_jobs=6)
         self.cv.fit(X=y, y=x)
         self.sensor_map = self.cv.best_estimator_.predict(0)
         self.selected_sensors = np.zeros(shape=data_train.shape[0], dtype=bool)
