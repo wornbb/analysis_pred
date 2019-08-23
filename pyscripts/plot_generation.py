@@ -82,7 +82,7 @@ class benchmark_factory():
             # regression benchmarking
             target = x[sample + self.pred_str,np.bitwise_not(self.selected_sensors)]
             error = np.absolute(regression - target)
-            diff = error / regression
+            diff = error / target
             max_diff = np.amax(diff)
             if max_diff <= 1/10**4:
                 result["regression_acc"] += 1
