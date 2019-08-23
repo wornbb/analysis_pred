@@ -28,7 +28,7 @@ class benchmark_factory():
         elif mode == "neural":
             self.predictor = self.neural_mode_predict
         self.flp = flp
-
+        self.pred_str = pred_str
         # default parameters
         self.lines_to_read = 10000
         # directory magic
@@ -89,10 +89,9 @@ class benchmark_factory():
                 result["regression_acc"] += 1
         else:
             prediction = from_predictor
-            pred_str = 5
         # register regression matrix
         key = ""
-        if prediction == y[sample + pred_str]:
+        if prediction == y[sample + self.pred_str]:
             key += "t"
         else:
             key += "f"

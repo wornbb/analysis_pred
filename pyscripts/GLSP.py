@@ -11,9 +11,11 @@ from loading import read_volt_grid
 
 
 class gl_model():
-    def __init__(self, pred_str):
+    def __init__(self, pred_str=0, target_sensor_count=False):
         self.pred_str = pred_str
-    def init_selector(self, pred_str=1,alpha=1.0, fit_intercept=True, normalize=False,
+        if target_sensor_count:
+            self.target_sensor_count = target_sensor_count
+    def init_selector(self,alpha=1.0, fit_intercept=True, normalize=False,
                  precompute=False, copy_X=True, max_iter=1000,
                  tol=1e-4, warm_start=False, positive=False,
                  random_state=None, selection='cyclic'):
@@ -31,8 +33,8 @@ class gl_model():
         # sensor selection
         self.init_selector(max_iter=10000,fit_intercept=False,positive=True)
         self.init_predicor()
-        score_correlation = make_scorer(loss_correlation, greater_is_better=False)
-        score_sensor_count = make_scorer(loss_sensor_count)
+        score_correlation = make_scorer(self.loss_correlation, greater_is_better=False)
+        score_sensor_count = make_scorer(self.loss_sensor_count, greater_is_better=False)
         self.cv = GridSearchCV(self.selector, parameters, cv=2, refit= 'correlation', scoring={'correlation':score_correlation, 'count':score_sensor_count}, n_jobs=6)
         self.cv.fit(X=y, y=x)
         self.sensor_map = self.cv.best_estimator_.predict(0)
@@ -43,12 +45,23 @@ class gl_model():
         other_y = data_train[np.bitwise_not(self.selected_sensors), self.pred_str:].T
         self.predictor.fit(X=self.selected_x, y=other_y)
     def predict(self, x):
-        x = x[:,self.selected_sensors]
-        return self.predictor.predict(x)
+        X = x[:,self.selected_sensors]
+        return self.predictor.predict(X)
     def evaluate(self, x, y):
-        x = x[:,self.selected_sensors]
-        y_pred = self.predictor.predict(x)
+        X = x[:,self.selected_sensors]
+        y_pred = self.predictor.predict(X)
         return [0, mean_squared_error(y, y_pred)]
+    def loss_sensor_count(self, y_true, selected):
+        return np.abs(np.count_nonzero(selected)-self.target_sensor_count)
+
+    def loss_correlation(self, y_true, selected):
+        X = pd.DataFrame(y_true[:, selected])
+        corrmat = X.corr()
+        mask = np.ones(corrmat.shape, dtype='bool')
+        mask[np.triu_indices(len(corrmat))] = False
+        z_trans = np.arctan(corrmat.values)
+        z_mean  = np.mean(np.absolute(z_trans))
+        return np.abs(np.tanh(z_mean))
 class gl_sensor_selector(Lasso):
     def __init__(self, alpha=1.0, fit_intercept=True, normalize=False,
                  precompute=False, copy_X=True, max_iter=1000,
@@ -85,28 +98,26 @@ class gl_sensor_selector(Lasso):
     def predict(self, x):
         return self.selected
 
-def loss_sensor_count(y_true, selected):
-    return np.count_nonzero(selected)
 
-def loss_correlation(y_true, selected):
-    X = pd.DataFrame(y_true[:, selected])
-    corrmat = X.corr()
-    mask = np.ones(corrmat.shape, dtype='bool')
-    mask[np.triu_indices(len(corrmat))] = False
-    z_trans = np.arctan(corrmat.values)
-    z_mean  = np.mean(np.absolute(z_trans))
-    return np.abs(np.tanh(z_mean))
 
 
 if __name__ == "__main__":
-    fname = "C:\\Users\\Yi\\Desktop\\Yaswan2c\\Yaswan2c.gridIR"
-    n = 40
+    #fname = "C:\\Users\\Yi\\Desktop\\Yaswan2c\\Yaswan2c.gridIR"
+    n = 1000
     data = read_volt_grid(fname, n)
-    [data_test, data_train] = np.split(data,2,axis=1)
+    # models = []
+    # for pred_str in [5,10,20,40,80]:
+    #     glsp = gl_model(pred_str=pred_str)
+    #     glsp.fit(data)
+    #     models.append(glsp)
+    # import pickle
+    # pickle.dump(models, open("ee.pred_str.models","wb"))
+    fname = "/data/yi/voltVio/analysis/raw/" + "blackscholes2c" + ".gridIR",
     models = []
-    for pred_str in range(5):
-        pred_str += 1
-        glsp = gl_model(pred_str=pred_str)
-        glsp.fit(data_train)
+    for target_sensor_count in [20,40,80,160,320,640]:
+        glsp = gl_model(target_sensor_count=target_sensor_count)
+        glsp.fit(data)
         models.append(glsp)
-    print('a')
+    import pickle
+    pickle.dump(models, open("ee.target_sensor_count.models","wb"))
+
