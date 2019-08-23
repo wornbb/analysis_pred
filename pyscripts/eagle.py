@@ -48,11 +48,15 @@ class ee_sensor_selector():
          self.raw_placement = []
          self.placement = np.zeros(grid_size, dtype=bool)
     def train(self, training_data):
-        self.umap = self.get_mask(self.flp, self.grid_size)
-        for unit_plan in self.placement_plan:
-            if unit_plan[2]:
-                segmented = self.flp_filter(training_data, unit_plan[1])
-                self.raw_placement = self.eagle_eye(segmented, unit_plan)
+        if self.placement_plan[0] == "all":
+            self.raw_placement = self.eagle_eye(training_data, self.placement_plan)
+        else:
+            self.umap = self.get_mask(self.flp, self.grid_size)
+            for unit_plan in self.placement_plan:
+                if unit_plan[2]:
+                    segmented = self.flp_filter(training_data, unit_plan[1])
+                    self.raw_placement = self.eagle_eye(segmented, unit_plan)
+        self.decode_raw_placement()
     def eagle_eye(self, occurrence, unit_plan)->list:
         """vanilla eagle eye algorithm. 
         Arguments:
@@ -68,7 +72,7 @@ class ee_sensor_selector():
         """
         unit = unit_plan[0]
         budget = unit_plan[2]
-        if not occurrence.size:
+        if not occurrence.size: # if no violation in this block, we randomly select a node
             for index in range(budget):
                 unit_flp = self.flp[unit]
                 minx = int(unit_flp[2] // self.pitch)
@@ -167,10 +171,11 @@ class ee_sensor_selector():
             segmented = np.hstack(segmented)
             return segmented
         return np.array([],dtype=np.double)
-    def predict(self):
+    def decode_raw_placement(self):
         for node in self.raw_placement:
             [row, col] = np.fromstring(node, dtype=int, sep=',')
             self.placement[row *int(np.sqrt(self.grid_size)) + col] = True
+    def predict(self):
         return self.placement
 class ee_model():
     def __init__(self, flp_fname, gridIR, pred_str=1, segment_trigger=True, placement_mode="uniform", placement_para=1):
@@ -183,9 +188,12 @@ class ee_model():
         if placement_mode == "uniform":
             self.single_budget = placement_para
             self.placer = self.uniform_placement
+        elif placement_mode == "selected_IC":
+            self.single_budget = placement_para
+            self.placer = self.selected_IC
         # loading
         self.flp = self.load_flp()
-        [self.training_data, self.grid_size] = read_violation(gridIR, lines_to_read=6000, trace=10)
+        [self.training_data, self.grid_size] = read_violation(gridIR, lines_to_read=20000, trace=2)
         # init key components
         self.placement_plan = self.generate_placement_plan()
         self.selector = ee_sensor_selector(self.flp, self.placement_plan, self.grid_size, self.segment_trigger)
@@ -240,6 +248,11 @@ class ee_model():
         return placement_plan
     def uniform_placement(self, unit, index):
         return self.single_budget
+    def selected_IC(self, unit, index):
+        selected_IC_list = ["L2", "ALU", "DCache", "ICache", "FPU"]
+        for selected_IC in selected_IC_list:
+            if selected_IC in unit:
+                return self.single_budget
     def show_flp(self):
         row = int(np.sqrt(self.grid_size))
         flp_img = np.zeros((row,row))
@@ -275,15 +288,22 @@ if __name__ == "__main__":
     elif core == 16:
         fname = PureWindowsPath(r"C:\Users\Yi\Desktop\analysis_pred\pyscripts").joinpath("Penryn22_ruby_ya_16c_v13.flp")
     gridIR = "F:\\Yaswan2c\\Yaswan2c.gridIR"
-    data = read_volt_grid(gridIR, 40)
+    data = read_volt_grid(gridIR, start_line=5000, lines_to_read=8000)
     models = []
-    for pred_str in range(5):
+    ee_test = ee_model(flp_fname=fname, gridIR=gridIR, pred_str=20)
+    ee_test.fit(data)
+    models.append(ee_test)
+    import pickle
+    pickle.dump(models, open("ee.original.str20.model", "wb"))
+
+    models = []
+    for pred_str in [5,10,20,40,80]:
         pred_str += 1
-        ee_test = ee_model(flp_fname=fname, gridIR=gridIR, pred_str=pred_str)
+        ee_test = ee_model(flp_fname=fname, gridIR=gridIR, pred_str=pred_str, placement_mode="selected_IC")
         ee_test.fit(data)
         models.append(ee_test)
     import pickle
-    pickle.dump(models, open("ee.model", "wb"))
+    pickle.dump(models, open("ee.segmented.pred_str.model", "wb"))
     # maxlen = 5000
     # start_line = 10000
     # (occurrence, dim) = read_violation(gridIR, 100000, trace=10)

@@ -260,11 +260,15 @@ if __name__ == "__main__":
         ]
     #data_list = [r"VoltNet_2c.h5"]
     pred_str_list = range(1,6)
-    gp_models = "gl.model"
+    gp_models = "gl.pred_str.models" 
     gp_benchmark = benchmark_factory(gp_models, f_list,flp=flp, exp_name="gp",mode="regression", pred_str_list=pred_str_list)
-    gp_benchmark.benchmark_from_ckp(ckp_list=["gp.regression.all_evaluations"])
-    #gp_benchmark.benchmarking()
-    ee_models = "ee.model"
-    ee_benchmark = benchmark_factory(ee_models, f_list,flp=flp, exp_name="ee",mode="regression", pred_str_list=pred_str_list)
-    ee_benchmark.benchmark_from_ckp(ckp_list=["ee.regression.all_evaluations"])
-    #ee_benchmark.benchmarking()
+    #gp_benchmark.benchmark_from_ckp(ckp_list=["gp.regression.all_evaluations"])
+    gp_benchmark.benchmarking()
+    ee_models = "ee.original.str20.model"
+    ee_benchmark = benchmark_factory(ee_models, f_list,flp=flp, exp_name="ee.original",mode="regression", pred_str_list=pred_str_list)
+    #ee_benchmark.benchmark_from_ckp(ckp_list=["ee.regression.all_evaluations"])
+    ee_benchmark.benchmarking()
+    ee_models = "ee.segmented.pred_str.model"
+    ee_benchmark = benchmark_factory(ee_models, f_list,flp=flp, exp_name="ee.segmented",mode="regression", pred_str_list=pred_str_list)
+    #ee_benchmark.benchmark_from_ckp(ckp_list=["ee.regression.all_evaluations"])
+    ee_benchmark.benchmarking()
