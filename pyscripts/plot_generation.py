@@ -11,9 +11,10 @@ from sklearn.metrics import confusion_matrix
 from GLSP import *
 from eagle import *
 from loading import *
-from pathlib import PureWindowsPath
+from pathlib import Path
 import cv2
 import os
+from confusion_matrix_pretty_print import *
 class benchmark_factory():
     def __init__(self, model_flist, data_list, exp_name, mode, flp):
         self.model_fname = model_flist
@@ -32,7 +33,7 @@ class benchmark_factory():
         self.lines_to_read = 10000
         # directory magic
         self.save_prefix = self.exp_name + "." + self.mode 
-        self.latex_fig = PureWindowsPath(r"./figs")
+        self.latex_fig = Path(r"./figs")
     def blank_result(self):
         """result template
         
@@ -197,9 +198,7 @@ class benchmark_factory():
         cfm_df = pd.DataFrame(cfm,index=["Positive", "Negative"],columns=["Positive", "Negative"])      
         cfm_df.index.name = 'Actual'
         cfm_df.columns.name = 'Predicted'
-        #fig, ax = plt.subplots()
-        plt.figure(figsize=(10,6))
-        sns.heatmap(cfm_df, annot=True, fmt='')        
+        pretty_plot_confusion_matrix(cfm_df)      
         tikzplotlib.save(self.latex_fig.joinpath("confusion_matrix.tex"))
         plt.close()
 
@@ -232,21 +231,21 @@ if __name__ == "__main__":
     if os.name == "nt":
         core = 2
         if core == 2:
-            flp = PureWindowsPath(r"C:\Users\Yi\Desktop\analysis_pred\pyscripts").joinpath("2c.png")
+            flp = Path(r"C:\Users\Yi\Desktop\analysis_pred\pyscripts").joinpath("2c.png")
         elif core == 4:
-            flp = PureWindowsPath(r"C:\Users\Yi\Desktop\analysis_pred\pyscripts").joinpath("4c.png")
+            flp = Path(r"C:\Users\Yi\Desktop\analysis_pred\pyscripts").joinpath("4c.png")
         elif core == 16:
-            flp = PureWindowsPath(r"C:\Users\Yi\Desktop\analysis_pred\pyscripts").joinpath("16c.png")
+            flp = Path(r"C:\Users\Yi\Desktop\analysis_pred\pyscripts").joinpath("16c.png")
         f_list = [r"F:\\Yaswan2c\\Yaswan2c.gridIR"]
         
     else:
         core = 2
         if core == 2:
-            flp = PureWindowsPath(r".").joinpath("2c.png")
+            flp = Path(r".").joinpath("2c.png")
         elif core == 4:
-            flp = PureWindowsPath(r".").joinpath("4c.png")
+            flp = Path(r".").joinpath("4c.png")
         elif core == 16:
-            flp = PureWindowsPath(r".").joinpath("16c.png")
+            flp = Path(r".").joinpath("16c.png")
         f_list = [
         "/data/yi/voltVio/analysis/raw/" + "blackscholes2c" + ".gridIR",
         "/data/yi/voltVio/analysis/raw/" + "bodytrack2c" + ".gridIR",

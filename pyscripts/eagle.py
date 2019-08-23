@@ -7,6 +7,7 @@ from sklearn.ensemble import BaggingRegressor
 from sklearn.metrics import make_scorer, mean_squared_error
 import matplotlib.pyplot as plt
 from pathlib import PureWindowsPath
+
 def eagle_eye(occurrence, budget ,placement=[])->list:
     """vanilla eagle eye algorithm. 
     
