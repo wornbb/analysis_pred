@@ -16,7 +16,7 @@ import cv2
 import os
 from confusion_matrix_pretty_print import *
 class benchmark_factory():
-    def __init__(self, model_flist, data_list, exp_name, mode, flp):
+    def __init__(self, model_flist, data_list, exp_name, mode, flp, pred_str_list):
         self.model_fname = model_flist
         self.data_list = data_list
         self.models = self.load_benchmark_models(model_flist)
@@ -28,7 +28,7 @@ class benchmark_factory():
         elif mode == "neural":
             self.predictor = self.neural_mode_predict
         self.flp = flp
-        self.pred_str = pred_str
+        self.pred_str_list = pred_str_list
         # default parameters
         self.lines_to_read = 10000
         # directory magic
@@ -110,8 +110,9 @@ class benchmark_factory():
         self.all_evaluations = []
         self.evaluation = dict.fromkeys(self.data_list)
         self.loaded_model = 0
-        for model in self.models:
+        for model, pred_str in zip(self.models, self.pred_str_list):
             self.selected_sensors = model.selected_sensors
+            self.pred_str = pred_str
             for dataset in self.data_list:
                 benchmark = self.load_benchmark_data(dataset)
                 result = self.evaluator(model, benchmark[0], benchmark[1])
@@ -195,11 +196,13 @@ class benchmark_factory():
             cfm[0,1] += benchmark_result["fp"]
             cfm[1,0] += benchmark_result["fn"]
             cfm[1,1] += benchmark_result["tn"]
-        cfm_df = pd.DataFrame(cfm,index=["Positive", "Negative"],columns=["Positive", "Negative"])      
-        cfm_df.index.name = 'Actual'
-        cfm_df.columns.name = 'Predicted'
+        cfm_df = pd.DataFrame(cfm)
+        #cfm_df = pd.DataFrame(cfm,index=["Positive", "Negative"],columns=["Positive", "Negative"])      
+        # cfm_df.index.name = 'Actual'
+        # cfm_df.columns.name = 'Predicted'
         pretty_plot_confusion_matrix(cfm_df)      
         #tikzplotlib.save(self.latex_fig.joinpath(self.save_prefix+".confusion_matrix.tex"))
+        plt.show()
         plt.savefig(self.latex_fig.joinpath(self.save_prefix+".confusion_matrix.pdf"))
         plt.close()
     def load_benchmark_models(self, model_fname):
@@ -229,8 +232,8 @@ class benchmark_factory():
     def benchmark_from_ckp(self, ckp_list):
         for ckp in ckp_list:
             self.all_evaluations = pickle.load(open(ckp,'rb'))
-            self.generate_acc_tbl()
-            self.generate_avg_acc_plt()
+            #self.generate_acc_tbl()
+            #self.generate_avg_acc_plt()
             self.generate_confusion_matrix()
             self.generate_sensor_selection()
 if __name__ == "__main__":
@@ -259,11 +262,12 @@ if __name__ == "__main__":
         "/data/yi/voltVio/analysis/raw/" + "facesim2c"+ ".gridIR",
         ]
     #data_list = [r"VoltNet_2c.h5"]
+    pred_str_list = range(1,6)
     gp_models = "gl.model"
-    gp_benchmark = benchmark_factory(gp_models, f_list,flp=flp, exp_name="gp",mode="regression")
+    gp_benchmark = benchmark_factory(gp_models, f_list,flp=flp, exp_name="gp",mode="regression", pred_str_list=pred_str_list)
     gp_benchmark.benchmark_from_ckp(ckp_list=["gp.regression.all_evaluations"])
     #gp_benchmark.benchmarking()
     ee_models = "ee.model"
-    ee_benchmark = benchmark_factory(ee_models, f_list,flp=flp, exp_name="ee",mode="regression")
+    ee_benchmark = benchmark_factory(ee_models, f_list,flp=flp, exp_name="ee",mode="regression", pred_str_list=pred_str_list)
     ee_benchmark.benchmark_from_ckp(ckp_list=["ee.regression.all_evaluations"])
     #ee_benchmark.benchmarking()

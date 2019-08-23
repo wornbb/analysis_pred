@@ -100,28 +100,39 @@ class gl_sensor_selector(Lasso):
 
     def predict(self, x):
         return self.selected
+        
+def loss_sensor_count(y_true, selected):
+    return np.count_nonzero(selected)
 
+def loss_correlation(y_true, selected):
+    X = pd.DataFrame(y_true[:, selected])
+    corrmat = X.corr()
+    mask = np.ones(corrmat.shape, dtype='bool')
+    mask[np.triu_indices(len(corrmat))] = False
+    z_trans = np.arctan(corrmat.values)
+    z_mean  = np.mean(np.absolute(z_trans))
+    return np.abs(np.tanh(z_mean))
 
 
 
 if __name__ == "__main__":
-    #fname = "C:\\Users\\Yi\\Desktop\\Yaswan2c\\Yaswan2c.gridIR"
+    fname = "C:\\Users\\Yi\\Desktop\\Yaswan2c\\Yaswan2c.gridIR"
     n = 1000
-    #data = read_volt_grid(fname, n)
+    data = read_volt_grid(fname, n)
+    models = []
+    for pred_str in [5,10,20,40,80]:
+        glsp = gl_model(pred_str=pred_str)
+        glsp.fit(data)
+        models.append(glsp)
+        import pickle
+        pickle.dump(models, open("ee.pred_str.models","wb"))
+    # fname = "/data/yi/voltVio/analysis/raw/" + "blackscholes2c" + ".gridIR"
+    # data = read_volt_grid(fname, n)
     # models = []
-    # for pred_str in [5,10,20,40,80]:
-    #     glsp = gl_model(pred_str=pred_str)
+    # for target_sensor_count in [20,40,80,160,320,640]:
+    #     glsp = gl_model(target_sensor_count=target_sensor_count)
     #     glsp.fit(data)
     #     models.append(glsp)
     # import pickle
-    # pickle.dump(models, open("ee.pred_str.models","wb"))
-    fname = "/data/yi/voltVio/analysis/raw/" + "blackscholes2c" + ".gridIR"
-    data = read_volt_grid(fname, n)
-    models = []
-    for target_sensor_count in [20,40,80,160,320,640]:
-        glsp = gl_model(target_sensor_count=target_sensor_count)
-        glsp.fit(data)
-        models.append(glsp)
-    import pickle
-    pickle.dump(models, open("ee.target_sensor_count.models","wb"))
+    # pickle.dump(models, open("ee.target_sensor_count.models","wb"))
 

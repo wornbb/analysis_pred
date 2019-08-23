@@ -109,7 +109,7 @@ def get_violation(data, occurrence=np.array([],dtype=np.double), ref=1, thres=4,
     else:
         return occurrence
 
-def read_violation(file, lines_to_read=0, start_line=0, trace=0, thres=4, ref=1, count=0, reverse=False):
+def read_violation(file, lines_to_read=0, start_line=0, trace=1, thres=4, ref=1, count=0, reverse=False):
     """Read the gridIR file but only return the occurrence when there is a violation.
     
     Arguments:
