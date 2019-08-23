@@ -33,7 +33,7 @@ class benchmark_factory():
         self.lines_to_read = 10000
         # directory magic
         self.save_prefix = self.exp_name + "." + self.mode 
-        self.latex_fig = Path(r"./figs")
+        self.latex_fig = Path(r"./tex_f")
     def blank_result(self):
         """result template
         
