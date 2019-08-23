@@ -27,7 +27,7 @@ class gl_model():
     def init_predicor(self):
         self.predictor = BaggingRegressor(base_estimator=LinearRegression(), n_estimators=5, n_jobs=6)
     def fit(self, data_train):
-        x = data_train[::2,:-self.pred_str].T
+        x = data_train[::2,:data_train.shape[1]-self.pred_str].T
         y = data_train[1::2,self.pred_str:].T
         parameters = {'alpha':np.arange(0.05, 1, 0.05)}
         # sensor selection
@@ -41,7 +41,7 @@ class gl_model():
         self.selected_sensors = np.zeros(shape=data_train.shape[0], dtype=bool)
         self.selected_sensors[::2] = self.sensor_map
         # data filtering
-        self.selected_x = data_train[self.selected_sensors,:-self.pred_str].T
+        self.selected_x = data_train[self.selected_sensors,:data_train.shape[1]-self.pred_str].T
         other_y = data_train[np.bitwise_not(self.selected_sensors), self.pred_str:].T
         self.predictor.fit(X=self.selected_x, y=other_y)
     def predict(self, x):
@@ -112,7 +112,7 @@ if __name__ == "__main__":
     #     models.append(glsp)
     # import pickle
     # pickle.dump(models, open("ee.pred_str.models","wb"))
-    fname = "/data/yi/voltVio/analysis/raw/" + "blackscholes2c" + ".gridIR",
+    fname = "/data/yi/voltVio/analysis/raw/" + "blackscholes2c" + ".gridIR"
     data = read_volt_grid(fname, n)
     models = []
     for target_sensor_count in [20,40,80,160,320,640]:
