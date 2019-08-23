@@ -1,3 +1,4 @@
+
 # -*- coding: utf-8 -*-
 """
 plot a pretty confusion matrix with seaborn
@@ -13,6 +14,7 @@ REFerences:
 """
 
 #imports
+
 from pandas import DataFrame
 import numpy as np
 import matplotlib.pyplot as plt
@@ -126,7 +128,7 @@ def insert_totals(df_cm):
 #
 
 def pretty_plot_confusion_matrix(df_cm, annot=True, cmap="Oranges", fmt='.2f', fz=11,
-      lw=0.5, cbar=False, figsize=[8,8], show_null_values=0, pred_val_axis='y'):
+      lw=0.5, cbar=False, figsize=[9,9], show_null_values=0, pred_val_axis='y'):
     """
       print conf matrix with default layout (like matlab)
       params:
@@ -200,6 +202,7 @@ def pretty_plot_confusion_matrix(df_cm, annot=True, cmap="Oranges", fmt='.2f', f
     ax.set_title('Confusion matrix')
     ax.set_xlabel(xlbl)
     ax.set_ylabel(ylbl)
+    plt.autoscale()
     plt.tight_layout()  #set layout slim
     #plt.show()
 #
