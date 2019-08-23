@@ -104,7 +104,7 @@ class gl_sensor_selector(Lasso):
 if __name__ == "__main__":
     #fname = "C:\\Users\\Yi\\Desktop\\Yaswan2c\\Yaswan2c.gridIR"
     n = 1000
-    data = read_volt_grid(fname, n)
+    #data = read_volt_grid(fname, n)
     # models = []
     # for pred_str in [5,10,20,40,80]:
     #     glsp = gl_model(pred_str=pred_str)
@@ -113,6 +113,7 @@ if __name__ == "__main__":
     # import pickle
     # pickle.dump(models, open("ee.pred_str.models","wb"))
     fname = "/data/yi/voltVio/analysis/raw/" + "blackscholes2c" + ".gridIR",
+    data = read_volt_grid(fname, n)
     models = []
     for target_sensor_count in [20,40,80,160,320,640]:
         glsp = gl_model(target_sensor_count=target_sensor_count)
