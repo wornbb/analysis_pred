@@ -6,6 +6,7 @@ from loading import *
 from tensorflow.keras.utils import to_categorical
 import os
 from loading import *
+
 if os.name == 'nt':
       name = "Yaswan2c_desktop"
       fname = "F:\\Yaswan2c\\Yaswan2c.gridIR"

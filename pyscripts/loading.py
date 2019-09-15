@@ -4,6 +4,8 @@ import pickle
 from tensorflow.keras.utils import to_categorical
 from tensorflow.keras.models import load_model
 from collections import deque
+from sklearn.preprocessing import StandardScaler
+
 def read_volt_grid(file, lines_to_read, start_line = 0):
     """Read .gridIR files and store them in a 2D array
     

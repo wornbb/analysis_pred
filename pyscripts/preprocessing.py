@@ -16,12 +16,15 @@ from clr_callback import *
 from loading import *
 
 from sklearn.preprocessing import StandardScaler
-
+class MyScaler():
+    def fit_transform(self,x):
+        transformed = (x - 1) * 100
+        return transformed
 class lstm_sweep():
     """ process traced grid to produce grid of probabilities.
         Only process 1 file at a time, because we assume the data loaded is already combined.
     """
-    def __init__(self, lstm_model, scaled_grid_fname, save_fname):
+    def __init__(self, lstm_model='residual.4.biLSTM.45.10-0.951-0.140.hdf5', scaled_grid_fname=[], save_fname=[]):
         self.lstm_model = load_frozen_lstm(lstm_model)
         self.load_fname = scaled_grid_fname
         self.save_fname = save_fname
@@ -53,7 +56,7 @@ class preScaler():
     def __init__(self, load_fname, save_fname):
         self.load_fname = load_fname
         self.save_fname = save_fname
-        self.scaler = StandardScaler()
+        self.scaler = MyScaler()
         with h5py.File(self.load_fname, 'r') as f:
             self.load_x = f["x"][()]
             self.load_y = f["y"][()]

@@ -8,7 +8,6 @@ from sklearn.model_selection import GridSearchCV
 from sklearn.preprocessing import StandardScaler
 
 from loading import read_volt_grid
-from sklearn.preprocessing import StandardScaler
 
 
 class gl_model():

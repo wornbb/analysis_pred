@@ -2,6 +2,7 @@ import tensorflow as tf
 import numpy as np
 from loading import generate_prediction_data
 from clr_callback import*
+import tensorflow
 from tensorflow_model_optimization.sparsity import keras as sparsity
 from tensorflow.keras.optimizers import *
 from tensorflow.keras.layers import TimeDistributed, Input, Dense, BatchNormalization, Flatten
@@ -11,7 +12,7 @@ from tensorflow.keras.callbacks import ModelCheckpoint, CSVLogger
 from tensorflow.keras.utils import to_categorical
 from tensorflow.keras.models import load_model
 from keras.utils.io_utils import HDF5Matrix
-
+from preprocessing import lstm_sweep
 from sklearn.metrics import make_scorer, mean_squared_error
 import pickle
 from loading import *
@@ -19,50 +20,69 @@ from clr_callback import*
 import h5py
 import os
 class voltnet_model():
-    def __init__(self):
-        self.LSTM = voltnet_LSTM()
+    def __init__(self, pred_str):
+        self.pred_str = pred_str
+        self.LSTM = voltnet_LSTM(pred_str=self.pred_str)
         self.callbacks = []
         self.prepare_callback_prune()
+        self.train_size = 20000
+        self.test_size = 1000
     def load_LSTM(self, model_name='residual.3.biLSTM.45.15-0.997-0.008.hdf5'):
         self.LSTM = load_frozen_lstm(model_name)
-    def load_prob(self, fname):
-        train_size = 20000
-        test_size = 1000
+    def load_h5(self, fname, categorical=True):
+
         with h5py.File(fname,'r') as f:
-            tag = f["y"][()]
-            x = f["x"][:train_size+test_size,...]
-        tag = to_categorical(tag[:train_size+test_size])
+            tag = f["y"][:self.train_size + self.test_size]
+            x = f["x"][:self.train_size + self.test_size,...]
+        if categorical:
+            tag = to_categorical(tag[:self.train_size + self.test_size])
         
         #self.x_train = HDF5Matrix(datapath=fname, dataset='x', start=0, end=train_size)
         #self.x_test = HDF5Matrix(datapath=fname, dataset='x', start=train_size, end=train_size+test_size)
-        self.x_train = x[:train_size,...]
-        self.x_test = x[train_size:train_size+test_size,...]
-        self.y_train = tag[:train_size,:]
-        self.y_test = tag[train_size:train_size+test_size,:]
+        return [x, tag]
+
+        # self.y_train = tag[:train_size,:]
+        # self.y_test = tag[train_size:train_size+test_size,:]
+    def divide_data(self, data):
+        train = data[:self.train_size,...]
+        test = data[self.train_size : self.train_size + self.test_size,...]
+        return [train, test]
+    def fit(self, lstm_train_data="Scaled_lstm_2c.h5.0.25", gird_train_data="Scaled_VoltNet_2c.h5"):
+        [x, y] = self.load_h5(fname=lstm_train_data, categorical=False)
+        [x_train, x_test] = self.divide_data(x)
+        [y_train, y_test] = self.divide_data(y)
+        self.LSTM.fit(x_train, y_train, x_test, y_test)
+        [x, y] = self.load_h5(fname=gird_train_data)
+        sweeper = lstm_sweep(scaled_grid_fname=gird_train_data, save_fname='F:\\lstm_data\\prob_distribution.h5')
+        print("Sweeping completed")
+        sweeper.lstm_model = self.LSTM
+        sweeper.process()
+        self.fit_from_prob()
     def fit_from_prob(self, fname='F:\\lstm_data\\prob_distribution.h5'):
-        self.load_prob(fname=fname)
-        self.fit_selector_()
-        self.fit_predictor_()
-    def fit_selector_(self):
-        inputs = Input(shape=(self.x_train.shape[1],))
+        [x, y] = self.load_h5(fname=fname)
+        [x_train, x_test] = self.divide_data(x)
+        [y_train, y_test] = self.divide_data(y)
+        self.fit_selector_(x_train=x_train, y_train=y_train, x_test=x_test, y_test=y_test)
+        self.fit_predictor_(x_train=x_train, y_train=y_train, x_test=x_test, y_test=y_test)
+    def fit_selector_(self, x_train, y_train, x_test, y_test):
+        inputs = Input(shape=(x_train.shape[1],))
         outputs = sparsity.prune_low_magnitude(Dense(2, activation='softmax'), **self.pruning_params)(inputs)
         self.selector = keras.models.Model(inputs=inputs, outputs=outputs)
         self.selector.summary()
         self.selector.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['categorical_accuracy'])
-        self.selector.fit(self.x_train, self.y_train,
-            validation_data=(self.x_test,self.y_test),
+        self.selector.fit(x_train, y_train,
+            validation_data=(x_test, y_test),
             batch_size=32,
             epochs=30,      
             shuffle='batch',
             callbacks=self.callbacks,
             verbose=1)
-    def fit_predictor_(self):
+    def fit_predictor_(self, x_train, y_train, x_test, y_test):
         output_weights = self.selector.layers[-1].get_weights()[0]
         weight_norm = np.linalg.norm(output_weights, axis=1)
         self.selected_sensors = weight_norm > 0.1
-        x_train = self.x_train[:,self.selected_sensors]
-        x_test = self.x_test[:, self.selected_sensors]
-
+        x_train = x_train[:,self.selected_sensors]
+        x_test = x_test[:, self.selected_sensors]
         n = 300
         inputs = Input(shape=(x_train.shape[1]))
         selu_ini = tf.keras.initializers.RandomNormal(mean=0.0, stddev=1/34, seed=None)
@@ -73,9 +93,9 @@ class voltnet_model():
         self.predictor.summary()
         ck_point = "pruned.nn."+ str(n) + ".{epoch:02d}-{val_categorical_accuracy:.3f}-{val_loss:.3f}.hdf5"
         self.predictor.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['categorical_accuracy'])
-        self.predictor.fit(x_train, self.y_train,
+        self.predictor.fit(x_train, y_train,
             shuffle='batch',
-            validation_data=(x_test[:,:],self.y_test[:,:]),
+            validation_data=(x_test[:,:],y_test[:,:]),
             batch_size=1,
             epochs=1,      
             callbacks=[ CSVLogger('pruned_training.csv',append=True),
@@ -139,15 +159,16 @@ class voltnet_model():
         y_pred = self.predictor.predict(X)
         return [0, mean_squared_error(y, y_pred)]
 class voltnet_LSTM():
-    def __init__(self):
+    def __init__(self, pred_str=0):
         self.callbacks = []
         self.prepare_callback_ckp()
         self.prepare_callback_csv()
-    def fit(self, x, y):
+        self.pred_str = pred_str
+    def fit(self, x, y, x_test, y_test):
         # NN hyperparameter
         rnn_dropout = 0.4
         m = 32
-        s = 4
+        s = 3
         n = 45
         batch_size = 128
         # setting up lstm
@@ -161,19 +182,20 @@ class voltnet_LSTM():
                 node = Add()([node, lstm])
             else:
                 node = Bidirectional(LSTM(n,recurrent_dropout=rnn_dropout, dropout=rnn_dropout,))(node)
-        selu_ini = keras.initializers.RandomNormal(mean=0.0, stddev=1/40, seed=None)
+        selu_ini = tensorflow.keras.initializers.RandomNormal(mean=0.0, stddev=1/40, seed=None)
         node = Dense(m, activation='selu', kernel_initializer=selu_ini)(node)
         node = BatchNormalization()(node)
         outputs = Dense(1, activation='sigmoid', kernel_initializer='random_uniform', bias_initializer='zeros')(node)
-        self.model = keras.models.Model(inputs=inputs, outputs=outputs)
-        rmsprop = keras.optimizers.rmsprop(lr=0.005)
-        self.model.compile(loss='binary_crossentropy', optimizer=rmsprop, metrics=['accuracy'])
+        self.model = tensorflow.keras.models.Model(inputs=inputs, outputs=outputs)
+        #rmsprop = tensorflow.keras.optimizers.RMSprop(lr=0.005)
+        self.model.compile(loss='binary_crossentropy', optimizer='RMSprop', metrics=['accuracy'])
         self.model.summary()
         print('Train...')  
-        self.model.fit(x, y,
+        self.model.fit(x[:-self.pred_str,...], y[self.pred_str:],
+            validation_data=(x_test, y_test),
             batch_size=batch_size,
             shuffle="batch",
-            epochs=15,
+            epochs=50,
             callbacks=self.callbacks,
             verbose=1)
     def prepare_callback_clr(self):
@@ -192,13 +214,9 @@ class voltnet_LSTM():
         self.callbacks.append(self.csv_logger)
     def predict(self, x):
         self.model.predict(x)
-
 def save_vn(model, fname="vn.test.model"):
     model.updater=[]
-    model.predictor = []
-    model.selector = []
     model.callbacks = []
-    model.LSTM = []
     pickle.dump(model, open(fname,'wb'))
 def load_vn(model_fname, selector_h5, predictor_h5):
     model = pickle.load(open(model_fname, "rb"))
@@ -208,6 +226,6 @@ def load_vn(model_fname, selector_h5, predictor_h5):
     model.callbacks=[]
     return model
 if __name__ == "__main__":
-    a = voltnet_model()
-    a.fit_from_prob()
+    a = voltnet_model(pred_str=5)
+    a.fit()
     save_vn(a)
