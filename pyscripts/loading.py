@@ -61,6 +61,8 @@ def get_violation(data, occurrence=np.array([],dtype=np.double), ref=1, thres=4,
     gird_size = data.shape[0]
     dim = int(np.sqrt(gird_size)) # This has to be a square gird
     margins = np.array([1 + thres/100, 1 - thres/100]) * ref
+    mar_high = 0
+    mar_low = 1
     time_stamp = 0
     new_occurrence = []
     vios_record = []
@@ -71,8 +73,8 @@ def get_violation(data, occurrence=np.array([],dtype=np.double), ref=1, thres=4,
     else:
         data = data.T
     for gird in data:
-        higher = gird > margins[0]
-        lower = gird < margins[1]
+        higher = gird > margins[mar_high]
+        lower = gird < margins[mar_low]
         vios = np.bitwise_or(higher, lower)
         if reverse:
             vios = np.bitwise_not(vios)
@@ -308,7 +310,7 @@ def generate_prediction_data(file, lines_to_read=0, selected_sensor=[],
 
 class voltnet_training_data_factory():
     def __init__(self, load_flist, lines_to_read=0, 
-                            trace=39, pred_str=5, thres=4, ref=1, global_vio=True, pos_percent=0.5,
+                            trace=39, pred_str=0, thres=4, ref=1, global_vio=True, pos_percent=0.5,
                             grid_trigger=True, grid_fsave="",  lstm_trigger=True, lstm_fsave=""):
         # sanity check
         if grid_trigger and grid_fsave == "":

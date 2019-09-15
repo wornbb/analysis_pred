@@ -15,6 +15,7 @@ from tensorflow_model_optimization.sparsity import keras as sparsity
 from clr_callback import *
 from loading import *
 
+from sklearn.preprocessing import StandardScaler
 
 class lstm_sweep():
     """ process traced grid to produce grid of probabilities.
@@ -52,7 +53,7 @@ class preScaler():
     def __init__(self, load_fname, save_fname):
         self.load_fname = load_fname
         self.save_fname = save_fname
-        self.scaler = MinMaxScaler(feature_range=(-0.5, 0.5))
+        self.scaler = StandardScaler()
         with h5py.File(self.load_fname, 'r') as f:
             self.load_x = f["x"][()]
             self.load_y = f["y"][()]

@@ -1,4 +1,5 @@
-
+import matplotlib
+matplotlib.use('Agg')
 # -*- coding: utf-8 -*-
 """
 plot a pretty confusion matrix with seaborn
@@ -204,6 +205,7 @@ def pretty_plot_confusion_matrix(df_cm, annot=True, cmap="Oranges", fmt='.2f', f
     ax.set_ylabel(ylbl)
     plt.autoscale()
     plt.tight_layout()  #set layout slim
+    return plt
     #plt.show()
 #
 

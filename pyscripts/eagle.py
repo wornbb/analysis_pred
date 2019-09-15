@@ -7,6 +7,7 @@ from sklearn.ensemble import BaggingRegressor
 from sklearn.metrics import make_scorer, mean_squared_error
 import matplotlib.pyplot as plt
 from pathlib import PureWindowsPath
+from sklearn.preprocessing import StandardScaler
 
 def eagle_eye(occurrence, budget ,placement=[])->list:
     """vanilla eagle eye algorithm. 
@@ -178,13 +179,15 @@ class ee_sensor_selector():
     def predict(self):
         return self.placement
 class ee_model():
-    def __init__(self, flp_fname, gridIR, pred_str=1, segment_trigger=True, placement_mode="uniform", placement_para=1):
+    def __init__(self, flp_fname, gridIR, pred_str=1, segment_trigger=True, placement_mode="uniform", placement_para=1, apply_norm=False):
         self.flp_fname = flp_fname
         self.girdIR = gridIR
         self.pred_str = pred_str
         self.segment_trigger = segment_trigger
         self.placement_mode = placement_mode
         self.placement_para = placement_para
+        self.apply_norm = apply_norm
+        self.scaler = StandardScaler()
         if placement_mode == "uniform":
             self.single_budget = placement_para
             self.placer = self.uniform_placement
@@ -225,10 +228,15 @@ class ee_model():
         self.selected_sensors = self.selector.predict()
         # data filtering
         self.selected_x = data[self.selected_sensors,:-self.pred_str].T
-        y = data[np.bitwise_not(self.selected_sensors),self.pred_str:].T 
-        self.predictor.fit(X=self.selected_x, y=y)
+        y = data[:,self.pred_str:].T 
+        if self.apply_norm:
+            y = self.scaler.fit_transform(y)
+            x = self.scaler.fit_transform(self.selected_x)
+        self.predictor.fit(X=x, y=y)
     def predict(self, x):
-        x = x[:,self.selected_sensors]
+        x = x[np.bitwise_not(self.selected_sensors),self.selected_sensors]
+        if self.apply_norm:
+            x = self.scaler.fit_transform(x)
         return self.predictor.predict(x)
     def evaluate(self, x, y):
         x = x[:,self.selected_sensors]
@@ -290,7 +298,7 @@ if __name__ == "__main__":
     gridIR = "F:\\Yaswan2c\\Yaswan2c.gridIR"
     data = read_volt_grid(gridIR, start_line=5000, lines_to_read=8000)
     models = []
-    ee_test = ee_model(flp_fname=fname, gridIR=gridIR, pred_str=20)
+    ee_test = ee_model(flp_fname=fname, gridIR=gridIR, pred_str=20, segment_trigger=False)
     ee_test.fit(data)
     models.append(ee_test)
     import pickle
