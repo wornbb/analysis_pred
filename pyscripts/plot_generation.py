@@ -17,8 +17,9 @@ from pathlib import Path
 import cv2
 import os
 from confusion_matrix_pretty_print import *
+from voltNet import *
 class benchmark_factory():
-    def __init__(self, model_flist, data_list, exp_name, mode, flp, pred_str_list, lines_to_read=5000):
+    def __init__(self, model_flist, data_list, exp_name, mode, flp, pred_str_list, lines_to_read=5000, lines_to_jump=0):
         self.model_fname = model_flist
         self.data_list = data_list
         self.models = self.load_benchmark_models(model_flist)
@@ -34,6 +35,7 @@ class benchmark_factory():
         self.pred_str_list = pred_str_list
         # default parameters
         self.lines_to_read = lines_to_read
+        self.lines_to_jump = lines_to_jump
         # directory magic
         self.save_prefix = self.exp_name + "." + self.mode 
         self.latex_fig = Path(r"./tex_f")
@@ -235,8 +237,9 @@ class benchmark_factory():
     def load_benchmark_models(self, model_fname):
         #self.models = []
         #for fname in model_list:
-        if model_fname.endswith(".h5"):
-            print("h5 loading not implemented yet")
+        if isinstance(model_fname, list): 
+            saved_model = voltnet_model()
+            saved_model.load()
         else:
             saved_model = pickle.load(open(model_fname, 'rb'))
         self.models= saved_model
@@ -246,9 +249,8 @@ class benchmark_factory():
         """ loaded data should have shapes (samples, nodes)"""
         if fname.endswith(".h5"):
             with h5py.File(fname, 'r') as f:
-                x = f["x"][:self.lines_to_read,:]
-                tag = f["y"][:self.lines_to_read]
-            
+                x = f["x"][self.lines_to_jump:self.lines_to_read+self.lines_to_jump,:]
+                tag = f["y"][self.lines_to_jump:self.lines_to_read+self.lines_to_jump]      
         elif fname.endswith(".gridIR"):
             loader = regression_training_data_factory([fname], lines_to_read=self.lines_to_read)
             [x, tag] = loader.generate()
@@ -314,6 +316,8 @@ if __name__ == "__main__":
     # #ee_benchmark.benchmark_from_ckp(ckp_list=["ee.regression.all_evaluations"])
     # ee_benchmark.benchmarking()
 
-    vn_models = "vn.test"
+    vn_models = ["voltnet"]
     f_list = ['F:\\lstm_data\\prob_distribution.h5']
-    vn_benchmark = benchmark_factory(vn_models, f_list, flp=flp, exp_name="vn.test", mode="classification", pred_str_list=[5])
+    vn_benchmark = benchmark_factory(vn_models, f_list, flp=flp, exp_name="vn.test", mode="classification", pred_str_list=[0], lines_to_read=10000, lines_to_jump=10000)
+    vn_benchmark.benchmarking()
+    print("complete")

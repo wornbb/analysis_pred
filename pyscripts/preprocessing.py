@@ -91,8 +91,8 @@ if __name__ == "__main__":
         lstm_load_fname = "F:\\lstm_data\\lstm_2c.h5.0.25"
         scaled_lstm_load_fname = "F:\\lstm_data\\Scaled_lstm_2c.h5.0.25"
 
-        lstm_model = 'residual.4.biLSTM.45.12-0.965-0.119.hdf5'
-        scaled_load_grid_file = "F:\\lstm_data\\Scaled_VoltNet_2c.h5"
+        lstm_model = 'voltnet..selector..16-0.961-0.130.hdf5'
+        scaled_load_grid_file = "Scaled_VoltNet_2c.h5"
         prob_distribution_file = "F:\\lstm_data\\prob_distribution.h5"
     else:
         grid_load_fname = "/media/yi/yi_final_resort/VoltNet_2c.h5"

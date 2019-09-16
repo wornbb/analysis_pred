@@ -20,13 +20,13 @@ from clr_callback import*
 import h5py
 import os
 class voltnet_model():
-    def __init__(self, pred_str):
+    def __init__(self, pred_str=0):
         self.pred_str = pred_str
         self.LSTM = voltnet_LSTM(pred_str=self.pred_str)
         self.callbacks = []
         self.prepare_callback_prune()
-        self.train_size = 20000
-        self.test_size = 1000
+        self.train_size = 10000
+        self.test_size = 3000
     def load_LSTM(self, model_name='residual.3.biLSTM.45.15-0.997-0.008.hdf5'):
         self.LSTM = load_frozen_lstm(model_name)
     def load_h5(self, fname, categorical=True):
@@ -54,9 +54,9 @@ class voltnet_model():
         self.LSTM.fit(x_train, y_train, x_test, y_test)
         [x, y] = self.load_h5(fname=gird_train_data)
         sweeper = lstm_sweep(scaled_grid_fname=gird_train_data, save_fname='F:\\lstm_data\\prob_distribution.h5')
-        print("Sweeping completed")
         sweeper.lstm_model = self.LSTM
         sweeper.process()
+        print("Sweeping completed")
         self.fit_from_prob()
     def fit_from_prob(self, fname='F:\\lstm_data\\prob_distribution.h5'):
         [x, y] = self.load_h5(fname=fname)
@@ -73,21 +73,24 @@ class voltnet_model():
         self.selector.fit(x_train, y_train,
             validation_data=(x_test, y_test),
             batch_size=32,
-            epochs=30,      
+            epochs=15,      
             shuffle='batch',
             callbacks=self.callbacks,
             verbose=1)
     def fit_predictor_(self, x_train, y_train, x_test, y_test):
         output_weights = self.selector.layers[-1].get_weights()[0]
         weight_norm = np.linalg.norm(output_weights, axis=1)
-        self.selected_sensors = weight_norm > 0.1
+        self.selected_sensors = weight_norm > 0.3
+        print(np.sum(self.selected_sensors))
         x_train = x_train[:,self.selected_sensors]
         x_test = x_test[:, self.selected_sensors]
-        n = 300
+        n = 64
         inputs = Input(shape=(x_train.shape[1]))
         selu_ini = tf.keras.initializers.RandomNormal(mean=0.0, stddev=1/34, seed=None)
         outputs = Dense(n, activation='selu', kernel_initializer=selu_ini, bias_initializer='zeros')(inputs)
         outputs = BatchNormalization()(outputs)
+        # outputs = Dense(n/4, activation='selu', kernel_initializer=selu_ini, bias_initializer='zeros')(outputs)
+        # outputs = BatchNormalization()(outputs)
         outputs = Dense(2, activation='softmax')(inputs)
         self.predictor = tf.keras.models.Model(inputs=inputs, outputs=outputs)
         self.predictor.summary()
@@ -97,45 +100,23 @@ class voltnet_model():
             shuffle='batch',
             validation_data=(x_test[:,:],y_test[:,:]),
             batch_size=1,
-            epochs=1,      
+            epochs=15,      
             callbacks=[ CSVLogger('pruned_training.csv',append=True),
                         ModelCheckpoint(ck_point, monitor='val_categorical_accuracy',save_best_only=True, verbose=1, mode='max'),
                         ],
             verbose=1)
-        # def fit(self, data_train):
-        #     output_weights = self.selector.layers[-1].get_weights()[0]
-        #     weight_norm = np.linalg.norm(output_weights, axis=1)
-        #     selected_sensors = weight_norm > 0.1
-        #     x_train = x_train[:,selected_sensors]
-        #     x_test = x_test[:, selected_sensors]
-        #     for n in range(300,301,5):
-        #           inputs = Input(shape=(x_train.shape[1]))
-        #           selu_ini = tf.keras.initializers.RandomNormal(mean=0.0, stddev=1/34, seed=None)
-        #           # outputs = Dense(n, activation='selu', kernel_initializer=selu_ini, bias_initializer='zeros')(inputs)
-        #           # outputs = BatchNormalization()(outputs)
-        #           # outputs = Dense(n/2, activation='selu', kernel_initializer=selu_ini, bias_initializer='zeros')(inputs)
-        #           # outputs = BatchNormalization()(outputs)
-        #           outputs = Dense(2, activation='softmax')(inputs)
-        #           model = tf.keras.models.Model(inputs=inputs, outputs=outputs)
-        #           model.summary()
-        #           ad = tf.keras.optimizers.Adam(lr=0.03, beta_1=0.9, beta_2=0.999, epsilon=None, decay=0.0, amsgrad=False)
-        #           logdir = 'prune.log'
-        #           ck_point = "pruned.nn."+ str(n) + ".{epoch:02d}-{val_categorical_accuracy:.3f}-{val_loss:.3f}.hdf5"
-        #           model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['categorical_accuracy'])
-        #           model.fit(x_train[:,:], y_train[:,:],
-        #                 shuffle='batch',
-        #                 validation_data=(x_test[:,:],y_test[:,:]),
-        #                 batch_size=1,
-        #                 epochs=200,      
-        #                 callbacks=[ CSVLogger('pruned_training.csv',append=True),
-        #                             ModelCheckpoint(ck_point, monitor='val_categorical_accuracy',save_best_only=True, verbose=1, mode='max'),
-        #                             ],
-        #                 verbose=1)
-
+        eva=self.predictor.evaluate(x=x_test,y=y_test)
+        print(eva)
+    def save(self):
+        self.predictor.save('voltnet.predictor.h5')
+        pickle.dump(self.selected_sensors, open("voltnet.selected.pk",'wb'))
+    def load(self, predictor_fname='voltnet.predictor.h5', selection_fname="voltnet.selected.pk"):
+        self.predictor = tf.keras.models.load_model(predictor_fname)
+        self.selected_sensors = pickle.load(open(selection_fname,'rb'))
     def prepare_callback_prune(self):
         self.pruning_params = {
             'pruning_schedule': sparsity.PolynomialDecay(initial_sparsity=0.50,
-                                                        final_sparsity=0.90,
+                                                        final_sparsity=0.98,
                                                         begin_step=500,
                                                         end_step=1500,
                                                         frequency=100)
@@ -153,7 +134,9 @@ class voltnet_model():
         self.csv_logger = CSVLogger('pruned_training.csv',append=True)
         self.callbacks.append(self.csv_logger)
     def predict(self, x):
-        self.predictor.predict(x[:,self.selected_sensors])
+        result = self.predictor.predict(x[:,self.selected_sensors])
+        #print(result)
+        return int(np.argmax(result, axis=1))
     def evaluate(self, x, y):
         X = x[:,self.selected_sensors]
         y_pred = self.predictor.predict(X)
@@ -191,7 +174,7 @@ class voltnet_LSTM():
         self.model.compile(loss='binary_crossentropy', optimizer='RMSprop', metrics=['accuracy'])
         self.model.summary()
         print('Train...')  
-        self.model.fit(x[:-self.pred_str,...], y[self.pred_str:],
+        self.model.fit(x[:x.shape[0]-self.pred_str,...], y[self.pred_str:],
             validation_data=(x_test, y_test),
             batch_size=batch_size,
             shuffle="batch",
@@ -217,6 +200,8 @@ class voltnet_LSTM():
 def save_vn(model, fname="vn.test.model"):
     model.updater=[]
     model.callbacks = []
+    model.lstm_model = []
+    model.selector = []
     pickle.dump(model, open(fname,'wb'))
 def load_vn(model_fname, selector_h5, predictor_h5):
     model = pickle.load(open(model_fname, "rb"))
@@ -226,6 +211,7 @@ def load_vn(model_fname, selector_h5, predictor_h5):
     model.callbacks=[]
     return model
 if __name__ == "__main__":
-    a = voltnet_model(pred_str=5)
-    a.fit()
-    save_vn(a)
+    a = voltnet_model(pred_str=0)
+    a.fit_from_prob()
+    a.save()
+    #a.load()
