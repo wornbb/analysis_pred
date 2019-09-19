@@ -54,7 +54,7 @@ class gl_model():
             print(np.sum(self.sensor_map))
             self.selected_sensors[::2] = self.sensor_map
             self.selected_x = data_train[self.selected_sensors,:data_train.shape[1]-self.pred_str].T
-            other_y = data_train[np.bitwise_not(self.selected_sensors), self.pred_str:].T
+            other_y = data_train[:, self.pred_str:].T
             self.predictor.fit(X=self.selected_x, y=other_y)
     def retrain_pred(self, data_train):
         self.selected_x = data_train[self.selected_sensors,:data_train.shape[1]-self.pred_str].T
@@ -111,8 +111,7 @@ class gl_sensor_selector(Lasso):
         self.validity = True
         self.selected = np.zeros_like(self.importance, dtype=bool)
         sorted_w = np.argsort(self.importance)
-        self.selected[sorted_w[-17:]] = True
-        print(self.selected[:20])
+        self.selected[sorted_w[-50:]] = True
         #print(np.linalg.norm(y.T - w.dot(x.T),1))
     def predict(self, x):
         if self.validity:
@@ -152,11 +151,11 @@ def loss_correlation(y_true, selected):
 
 if __name__ == "__main__":
     fname = "C:\\Users\\Yi\\Desktop\\Yaswan2c\\Yaswan2c.gridIR"
-    n = 100
+    n = 10000
     data = read_volt_grid(fname, n)
     models = []
     registered_count = []
-    for pred_str in [1,2,3,4,5]:
+    for pred_str in [0,1,2,3,4,5]:
         glsp = gl_model(pred_str=pred_str)
         glsp.fit(data)
         if glsp.validity:
@@ -165,8 +164,9 @@ if __name__ == "__main__":
         else:
             print(pred_str)
         import pickle
-        pickle.dump(registered_count, open("gl.pred_str.registry1","wb"))
-        pickle.dump(models, open("gl.pred_str.models1","wb"))
+        print("complete")
+        pickle.dump(registered_count, open("gl.pred_str.registry2","wb"))
+        pickle.dump(models, open("gl.pred_str.models2","wb"))
     # fname = "C:\\Users\\Yi\\Desktop\\Yaswan2c\\Yaswan2c.gridIR"
     # n = 200
     # data = read_volt_grid(fname, n)

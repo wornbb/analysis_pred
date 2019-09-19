@@ -345,8 +345,10 @@ class voltnet_training_data_factory():
             gridIR = self.open_for_read(fname)
             self.process_gridIR(gridIR)
             gridIR.close()
-        self.lstm.close()
-        self.grid.close()
+        if self.lstm_trigger:
+            self.lstm.close()
+        if self.grid_trigger:        
+            self.grid.close()
     def process_gridIR(self, lf):
         buffer = self.init_buffer(lf)
         norm = {"counter": 0, "timer": 0}
@@ -397,7 +399,7 @@ class voltnet_training_data_factory():
                 self.lstmY[self.lstm_count+vio_count* int(register_pos):new_lstm_count] = 0
             self.lstm_count = new_lstm_count
     def register_grid(self, buffer, tag):
-        if self.grid_count:
+        if self.grid_trigger:
             self.grid_count += 1
             self.gridX.resize(self.grid_count, axis=0)
             self.gridY.resize(self.grid_count, axis=0)

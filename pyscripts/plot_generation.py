@@ -18,8 +18,11 @@ import cv2
 import os
 from confusion_matrix_pretty_print import *
 from voltNet import *
+from sklearn.metrics import r2_score
+from os.path import basename
+import copy
 class benchmark_factory():
-    def __init__(self, model_flist, data_list, exp_name, mode, flp, pred_str_list, lines_to_read=5000, lines_to_jump=0):
+    def __init__(self, model_flist, data_list, exp_name, mode, flp, pred_str_list, lines_to_read=1000, lines_to_jump=0):
         self.model_fname = model_flist
         self.data_list = data_list
         self.models = self.load_benchmark_models(model_flist)
@@ -53,6 +56,9 @@ class benchmark_factory():
         if self.mode == "regression":
             result["regression_acc"] = 0
             result["regression_total"] = 0
+            result["Mean_Squared_Error"] = 0
+            result["Standard_Deviation_Error"] = 0
+            result["R^2"] = 0
         return result
     def regression_mode_predict(self, model, x):
         # get the output from given model. the model should take care of the node selection
@@ -85,6 +91,9 @@ class benchmark_factory():
         result["acc"] = (result["tp"] + result["tn"]) / (result["fp"] + result["fn"] + result["tp"] + result["tn"])
         if self.mode == "regression":
             result["regression_acc"] = result["regression_acc"] / result["regression_total"]
+            result["Mean_Squared_Error"] /= (result["fp"] + result["fn"] + result["tp"] + result["tn"])
+            result["R^2"] /= (result["fp"] + result["fn"] + result["tp"] + result["tn"])
+            result["Standard_Deviation_Error"] /= (result["fp"] + result["fn"] + result["tp"] + result["tn"])
         return result
     def test_prediction(self, from_predictor, x, y, sample, result):
         if self.mode == "regression":
@@ -94,11 +103,20 @@ class benchmark_factory():
             # dirty fixing
             # regression benchmarking
             target = x[sample + self.pred_str, np.bitwise_not(self.selected_sensors)]
+            #target = x[sample + self.pred_str, :]
             error = np.absolute(regression - target)
             diff = error / target
             max_diff = np.amax(diff)
             if max_diff <= 1/10**4:
                 result["regression_acc"] += 1
+            # stats
+            std_y = np.std(target)
+            std_p = np.std(regression.flatten())
+            result["Standard_Deviation_Error"] += std_y - std_p
+            mean_y = np.mean(target)
+            mean_p = np.mean(regression.flatten())
+            result["Mean_Squared_Error"] += (mean_y - mean_p)**2
+            result["R^2"] += r2_score(target, regression.flatten())
         else:
             prediction = from_predictor
         # register regression matrix
@@ -128,7 +146,7 @@ class benchmark_factory():
             for dataset in self.data_list:
                 benchmark = self.load_benchmark_data(dataset)
                 result = self.evaluator(model, benchmark[0], benchmark[1])
-                self.evaluation[dataset] = result
+                self.evaluation[dataset] = copy.deepcopy(result)
             self.all_evaluations.append(self.evaluation)
             self.loaded_model += 1
         pickle.dump(self.all_evaluations, open(self.save_prefix + ".all_evaluations",'wb'))
@@ -141,6 +159,20 @@ class benchmark_factory():
         self.generate_confusion_matrix()
         print("printing acc ss")
         self.generate_sensor_selection()
+        print("printing stat tbl")
+        self.generate_stat_tbl()
+        print("Complete")
+    def generate_stat_tbl(self):
+        if self.mode == "regression":
+            fname_list = [basename(dataset)[:-7] + ".stat_tbl" + ".csv" for dataset in self.data_list]
+            columns = ["Mean_Squared_Error", "Standard_Deviation_Error", "R^2"]
+            for model_eval, pred_str in zip(self.all_evaluations, self.pred_str_list):
+                row_label = self.exp_name + ".pred_str." + str(pred_str)
+                for data_eval, fname in zip(model_eval.values(), fname_list):
+                    data = [data_eval[key] for key in columns]
+                    df = pandas.DataFrame(np.array(data).reshape(1,-1), index=[row_label], columns=columns)
+                    with open(fname, 'a') as f:
+                        df.to_csv(f, header=f.tell()==0)
     def generate_avg_acc_plt(self):
         """Generate average accurary plot to compare the performance of multiple models.
         """
@@ -219,21 +251,18 @@ class benchmark_factory():
             plt.close()
     def generate_confusion_matrix(self):
         cfm = np.zeros(shape=(2,2))
-        # take the evaluation where pred_str = 5
-
-        pred_str_5_evaluation = self.all_evaluations[self.index_5]
-        for benchmark_result in pred_str_5_evaluation.values():
-            cfm[0,0] += benchmark_result["tp"]
-            cfm[0,1] += benchmark_result["fp"]
-            cfm[1,0] += benchmark_result["fn"]
-            cfm[1,1] += benchmark_result["tn"]
-        cfm_df = pd.DataFrame(cfm,index=["Positive", "Negative"],columns=["Positive", "Negative"])      
-        # cfm_df.index.name = 'Actual'
-        # cfm_df.columns.name = 'Predicted'
-        p=pretty_plot_confusion_matrix(cfm_df)      
-        #tikzplotlib.save(self.latex_fig.joinpath(self.save_prefix+".confusion_matrix.tex"))
-        plt.savefig(self.latex_fig.joinpath(self.save_prefix+".confusion_matrix.pdf"))
-        p.close()
+        for model_eval, pred_str in zip(self.all_evaluations, self.pred_str_list):
+            for benchmark_result in model_eval.values():
+                cfm[0,0] += benchmark_result["tp"]
+                cfm[0,1] += benchmark_result["fp"]
+                cfm[1,0] += benchmark_result["fn"]
+                cfm[1,1] += benchmark_result["tn"]
+            cfm_df = pd.DataFrame(cfm,index=["Positive", "Negative"],columns=["Positive", "Negative"])      
+            # cfm_df.index.name = 'Actual'
+            # cfm_df.columns.name = 'Predicted'
+            p=pretty_plot_confusion_matrix(cfm_df)      
+            plt.savefig(self.latex_fig.joinpath(self.exp_name + ".pred_str." + str(pred_str) + ".confusion_matrix.pdf"))
+            p.close()
     def load_benchmark_models(self, model_fname):
         #self.models = []
         #for fname in model_list:
@@ -305,19 +334,32 @@ if __name__ == "__main__":
     # gp_benchmark.benchmarking()
     # #gp_benchmark.benchmark_from_ckp(ckp_list=["gp.regression.all_evaluations"])
 
-    # pred_str_list = [1]
-    # ee_models = "ee.original.str20.model"
+    # pred_str_list = [0,1,2,3,4,5]
+    # ee_models = "ee.original.pred_str.model"
     # ee_benchmark = benchmark_factory(ee_models, f_list,flp=flp, exp_name="ee.original",mode="regression", pred_str_list=pred_str_list)
     # ee_benchmark.benchmarking()    
     # #ee_benchmark.benchmark_from_ckp(ckp_list=["ee.regression.all_evaluations"])
-    # pred_str_list = range(1,6)
     # ee_models = "ee.segmented.pred_str.model"
     # ee_benchmark = benchmark_factory(ee_models, f_list,flp=flp, exp_name="ee.segmented",mode="regression", pred_str_list=pred_str_list)
     # #ee_benchmark.benchmark_from_ckp(ckp_list=["ee.regression.all_evaluations"])
     # ee_benchmark.benchmarking()
 
-    vn_models = ["voltnet"]
-    f_list = ['F:\\lstm_data\\prob_distribution.h5']
-    vn_benchmark = benchmark_factory(vn_models, f_list, flp=flp, exp_name="vn.test", mode="classification", pred_str_list=[0], lines_to_read=10000, lines_to_jump=10000)
-    vn_benchmark.benchmarking()
-    print("complete")
+    pred_str_list = [0,5,10,20,40]
+    ee_models = "ee.original.pred_str.model"
+    ee_benchmark = benchmark_factory(ee_models, f_list,flp=flp, exp_name="ee.original",mode="regression", pred_str_list=pred_str_list, lines_to_read=1000, lines_to_jump=10000)
+    ee_benchmark.benchmarking()    
+    #ee_benchmark.benchmark_from_ckp(ckp_list=["ee.regression.all_evaluations"])
+    ee_models = "ee.segmented.pred_str.model"
+    ee_benchmark = benchmark_factory(ee_models, f_list,flp=flp, exp_name="ee.segmented",mode="regression", pred_str_list=pred_str_list, lines_to_read=1000, lines_to_jump=10000)
+    #ee_benchmark.benchmark_from_ckp(ckp_list=["ee.regression.all_evaluations"])
+    ee_benchmark.benchmarking()
+
+    # vn_models = ["voltnet"]
+    # f_list = ['F:\\lstm_data\\prob_distribution.h5']
+    # vn_benchmark = benchmark_factory(vn_models, f_list, flp=flp, exp_name="vn.test", mode="classification", pred_str_list=[0], lines_to_read=10000, lines_to_jump=10000)
+    # vn_benchmark.benchmarking()
+    # print("complete")
+    import winsound
+    frequency = 2500  # Set Frequency To 2500 Hertz
+    duration = 1000  # Set Duration To 1000 ms == 1 second
+    winsound.Beep(frequency, duration)

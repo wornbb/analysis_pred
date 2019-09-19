@@ -28,11 +28,12 @@ lstm_samples = 0
 grid_samples = 0
 balance_list = [0.1, 0.15, 0.25, 0.3]
 # generating multiply training set with different pred_str
-pred_str_list = [0,1,2,3,4]
+pred_str_list = [0,5,10,20,40]
 for pred_str in pred_str_list:
       balancing_lstm_save =  lstm_save + ".str" + str(pred_str)
       balancing_grid_save =  net_save + ".str" + str(pred_str)
-      generator = voltnet_training_data_factory(f_list,trace=39, ref=1, pred_str=pred_str, thres=4, pos_percent=0.5, grid_fsave=balancing_grid_save, lstm_fsave=balancing_lstm_save)
+      trace = 35 + pred_str
+      generator = voltnet_training_data_factory(f_list,trace=trace, ref=1, pred_str=pred_str, thres=4, pos_percent=0.5, grid_fsave=balancing_grid_save, lstm_fsave=balancing_lstm_save)
       generator.generate()
 # # generating data for regression weakness plot
 # balancing_grid_save =  dump + "overall_regression_testing.h5"

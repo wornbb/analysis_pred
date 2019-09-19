@@ -8,6 +8,7 @@ from sklearn.metrics import make_scorer, mean_squared_error
 import matplotlib.pyplot as plt
 from pathlib import PureWindowsPath
 from sklearn.preprocessing import StandardScaler
+import pickle
 
 def eagle_eye(occurrence, budget ,placement=[])->list:
     """vanilla eagle eye algorithm. 
@@ -221,22 +222,24 @@ class ee_model():
                     flp[unit[0]] = np.array(unit[1:], dtype=np.float64)
         return flp
     def init_predicor(self):
-        self.predictor = BaggingRegressor(base_estimator=LinearRegression(), n_estimators=5, n_jobs=6)
+        #self.predictor = BaggingRegressor(base_estimator=LinearRegression(), n_estimators=5, n_jobs=6)
+        self.predictor = LinearRegression(fit_intercept=False)
     def fit(self, data):
         # sensor selection
         self.selector.train(self.training_data)
         self.selected_sensors = self.selector.predict()
         # data filtering
-        self.selected_x = data[self.selected_sensors,:-self.pred_str].T
+        self.selected_x = data[self.selected_sensors,:data.shape[1]-self.pred_str].T
         y = data[:,self.pred_str:].T 
-        if self.apply_norm:
-            y = self.scaler.fit_transform(y)
-            x = self.scaler.fit_transform(self.selected_x)
+        x = self.selected_x
+        # if self.apply_norm:
+        #     y = self.scaler.fit_transform(y)
+        #     x = self.scaler.fit_transform(self.selected_x)
         self.predictor.fit(X=x, y=y)
     def predict(self, x):
-        x = x[np.bitwise_not(self.selected_sensors),self.selected_sensors]
-        if self.apply_norm:
-            x = self.scaler.fit_transform(x)
+        x = x[:,self.selected_sensors]
+        # if self.apply_norm:
+        #     x = self.scaler.fit_transform(x)
         return self.predictor.predict(x)
     def evaluate(self, x, y):
         x = x[:,self.selected_sensors]
@@ -296,22 +299,45 @@ if __name__ == "__main__":
     elif core == 16:
         fname = PureWindowsPath(r"C:\Users\Yi\Desktop\analysis_pred\pyscripts").joinpath("Penryn22_ruby_ya_16c_v13.flp")
     gridIR = "F:\\Yaswan2c\\Yaswan2c.gridIR"
-    data = read_volt_grid(gridIR, start_line=5000, lines_to_read=8000)
+    data = read_volt_grid(gridIR, lines_to_read=100)
+    # models = []
+    # ee_test = ee_model(flp_fname=fname, gridIR=gridIR, pred_str=20, segment_trigger=False)
+    # ee_test.fit(data)
+    # models.append(ee_test)
+    # pickle.dump(models, open("ee.original.str20.model", "wb"))
     models = []
-    ee_test = ee_model(flp_fname=fname, gridIR=gridIR, pred_str=20, segment_trigger=False)
-    ee_test.fit(data)
-    models.append(ee_test)
-    import pickle
-    pickle.dump(models, open("ee.original.str20.model", "wb"))
+    pred_str_list = [0,5,10,20,40]
+    for pred_str in pred_str_list:
+        #pred_str += 1
+        ee_test = ee_model(flp_fname=fname, gridIR=gridIR, pred_str=pred_str, segment_trigger=False)
+        ee_test.fit(data)
+        models.append(ee_test)
+        pickle.dump(models, open("ee.original.pred_str.model", "wb"))
 
     models = []
-    for pred_str in [5,10,20,40,80]:
-        pred_str += 1
+    for pred_str in pred_str_list:
+        #pred_str += 1
         ee_test = ee_model(flp_fname=fname, gridIR=gridIR, pred_str=pred_str, placement_mode="selected_IC")
         ee_test.fit(data)
         models.append(ee_test)
-    import pickle
-    pickle.dump(models, open("ee.segmented.pred_str.model", "wb"))
+        pickle.dump(models, open("ee.segmented.pred_str.model", "wb"))
+
+
+    # models = []
+    # for pred_str in [0,5,10,20,40]:
+    #     #pred_str += 1
+    #     ee_test = ee_model(flp_fname=fname, gridIR=gridIR, pred_str=pred_str, segment_trigger=False)
+    #     ee_test.fit(data)
+    #     models.append(ee_test)
+    #     pickle.dump(models, open("ee.original.pred_str.small.model", "wb"))
+
+    # models = []
+    # for pred_str in [0,5,10,20,40]:
+    #     #pred_str += 1
+    #     ee_test = ee_model(flp_fname=fname, gridIR=gridIR, pred_str=pred_str, placement_mode="selected_IC")
+    #     ee_test.fit(data)
+    #     models.append(ee_test)
+    #     pickle.dump(models, open("ee.segmented.pred_str.small.model", "wb"))
     # maxlen = 5000
     # start_line = 10000
     # (occurrence, dim) = read_violation(gridIR, 100000, trace=10)
@@ -327,3 +353,7 @@ if __name__ == "__main__":
     #         result = eagle.eagle_eye(segmented, unit[2], result)
 
     # print(result)
+    import winsound
+    frequency = 2500  # Set Frequency To 2500 Hertz
+    duration = 1000  # Set Duration To 1000 ms == 1 second
+    winsound.Beep(frequency, duration)
