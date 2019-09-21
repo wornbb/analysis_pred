@@ -59,7 +59,7 @@ class benchmark_factory():
             result["Mean_Squared_Error"] = 0
             result["Standard_Deviation_Error"] = 0
             result["R^2"] = 0
-        return result
+        return copy.deepcopy(result)
     def regression_mode_predict(self, model, x):
         # get the output from given model. the model should take care of the node selection
         # we benchmark a regression model should have 2 parts. 1. classificaiton 2. regression
@@ -68,8 +68,8 @@ class benchmark_factory():
         violation_sample = np.bitwise_or(x[:,model.selected_sensors] >= 1.04, x[:,model.selected_sensors] <= 0.96)
         if violation_pred.any():
             prediction = 1
-        elif violation_sample.any():
-            prediction = 1
+        # elif violation_sample.any():
+        #     prediction = 1
         else:
             prediction = 0
         return [prediction, regression]
@@ -102,8 +102,8 @@ class benchmark_factory():
             regression = from_predictor[1]
             # dirty fixing
             # regression benchmarking
-            target = x[sample + self.pred_str, np.bitwise_not(self.selected_sensors)]
-            #target = x[sample + self.pred_str, :]
+            #target = x[sample + self.pred_str, np.bitwise_not(self.selected_sensors)]
+            target = x[sample + self.pred_str, :]
             error = np.absolute(regression - target)
             diff = error / target
             max_diff = np.amax(diff)
@@ -113,9 +113,7 @@ class benchmark_factory():
             std_y = np.std(target)
             std_p = np.std(regression.flatten())
             result["Standard_Deviation_Error"] += std_y - std_p
-            mean_y = np.mean(target)
-            mean_p = np.mean(regression.flatten())
-            result["Mean_Squared_Error"] += (mean_y - mean_p)**2
+            result["Mean_Squared_Error"] += np.sum((target - regression.flatten())**2) / len(target)
             result["R^2"] += r2_score(target, regression.flatten())
         else:
             prediction = from_predictor
@@ -146,8 +144,8 @@ class benchmark_factory():
             for dataset in self.data_list:
                 benchmark = self.load_benchmark_data(dataset)
                 result = self.evaluator(model, benchmark[0], benchmark[1])
-                self.evaluation[dataset] = copy.deepcopy(result)
-            self.all_evaluations.append(self.evaluation)
+                self.evaluation[dataset] = result
+            self.all_evaluations.append(copy.deepcopy(self.evaluation))
             self.loaded_model += 1
         pickle.dump(self.all_evaluations, open(self.save_prefix + ".all_evaluations",'wb'))
         #self.all_evaluations = pickle.load(open(self.save_prefix + ".all_evaluations",'rb'))
@@ -276,17 +274,21 @@ class benchmark_factory():
         return self.models
     def load_benchmark_data(self, fname):
         """ loaded data should have shapes (samples, nodes)"""
-        if fname.endswith(".h5"):
-            with h5py.File(fname, 'r') as f:
-                x = f["x"][self.lines_to_jump:self.lines_to_read+self.lines_to_jump,:]
-                tag = f["y"][self.lines_to_jump:self.lines_to_read+self.lines_to_jump]      
-        elif fname.endswith(".gridIR"):
-            loader = regression_training_data_factory([fname], lines_to_read=self.lines_to_read)
-            [x, tag] = loader.generate()
-            tag = np.array(tag)
-            x = x.T
-        else:
-            print("undefined file type to load")
+        if self.mode == "regression":
+            if fname.endswith(".gridIR"):
+                loader = regression_training_data_factory([fname], lines_to_read=self.lines_to_read)
+                [x, tag] = loader.generate()
+                tag = np.array(tag)
+                x = x.T
+            if fname.endswith(".h5"):
+                with h5py.File(fname, 'r') as f: # loading volnet files
+                    x = f["x"][self.lines_to_jump:self.lines_to_read+self.lines_to_jump,:,-self.pred_str,-1]
+                    tag = f["y"][self.lines_to_jump:self.lines_to_read+self.lines_to_jump]    
+        if self.mode == "classification":
+            if fname.endswith(".h5"): # loading distribution files
+                with h5py.File(fname, 'r') as f:
+                    x = f["x"][self.lines_to_jump:self.lines_to_read+self.lines_to_jump,:]
+                    tag = f["y"][self.lines_to_jump:self.lines_to_read+self.lines_to_jump]      
         return [x, tag.astype('int')]
     def benchmark_from_ckp(self, ckp_list):
         for ckp in ckp_list:
@@ -324,33 +326,25 @@ if __name__ == "__main__":
         "/data/yi/voltVio/analysis/raw/" + "freqmine2c"+ ".gridIR",
         "/data/yi/voltVio/analysis/raw/" + "facesim2c"+ ".gridIR",
         ]
-    # #data_list = [r"VoltNet_2c.h5"]
-    # pred_str_list = pickle.load(open("gl.pred_str.registry1","rb"))
-    # #pred_str_list = range(5)
-    # print(pred_str_list)
-    # #gp_models = "gl.model" 
-    # gp_models = "gl.pred_str.models1" 
-    # gp_benchmark = benchmark_factory(gp_models, f_list,flp=flp, exp_name="gp",mode="regression", pred_str_list=pred_str_list)
-    # gp_benchmark.benchmarking()
-    # #gp_benchmark.benchmark_from_ckp(ckp_list=["gp.regression.all_evaluations"])
-
-    # pred_str_list = [0,1,2,3,4,5]
-    # ee_models = "ee.original.pred_str.model"
-    # ee_benchmark = benchmark_factory(ee_models, f_list,flp=flp, exp_name="ee.original",mode="regression", pred_str_list=pred_str_list)
-    # ee_benchmark.benchmarking()    
-    # #ee_benchmark.benchmark_from_ckp(ckp_list=["ee.regression.all_evaluations"])
-    # ee_models = "ee.segmented.pred_str.model"
-    # ee_benchmark = benchmark_factory(ee_models, f_list,flp=flp, exp_name="ee.segmented",mode="regression", pred_str_list=pred_str_list)
-    # #ee_benchmark.benchmark_from_ckp(ckp_list=["ee.regression.all_evaluations"])
-    # ee_benchmark.benchmarking()
-
+    lines_to_read = 500
+    lines_to_jump = 150
+    f_list = ["F:\\lstm_data\\VoltNet_2c.h5.str0.h5"]
+    #gp_models = "gl.model" 
     pred_str_list = [0,5,10,20,40]
+    gp_models = "gl.pred_str.models" 
+    gp_benchmark = benchmark_factory(gp_models, f_list,flp=flp, exp_name="gp",mode="regression",
+                                     pred_str_list=pred_str_list, lines_to_read=lines_to_read, lines_to_jump=lines_to_jump)
+    gp_benchmark.benchmarking()
+    #gp_benchmark.benchmark_from_ckp(ckp_list=["gp.regression.all_evaluations"])
+
     ee_models = "ee.original.pred_str.model"
-    ee_benchmark = benchmark_factory(ee_models, f_list,flp=flp, exp_name="ee.original",mode="regression", pred_str_list=pred_str_list, lines_to_read=1000, lines_to_jump=10000)
+    ee_benchmark = benchmark_factory(ee_models, f_list,flp=flp, exp_name="ee.original",mode="regression",
+                                     pred_str_list=pred_str_list, lines_to_read=lines_to_read, lines_to_jump=lines_to_jump)
     ee_benchmark.benchmarking()    
     #ee_benchmark.benchmark_from_ckp(ckp_list=["ee.regression.all_evaluations"])
     ee_models = "ee.segmented.pred_str.model"
-    ee_benchmark = benchmark_factory(ee_models, f_list,flp=flp, exp_name="ee.segmented",mode="regression", pred_str_list=pred_str_list, lines_to_read=1000, lines_to_jump=10000)
+    ee_benchmark = benchmark_factory(ee_models, f_list,flp=flp, exp_name="ee.segmented",mode="regression",
+                                     pred_str_list=pred_str_list, lines_to_read=lines_to_read, lines_to_jump=lines_to_jump)
     #ee_benchmark.benchmark_from_ckp(ckp_list=["ee.regression.all_evaluations"])
     ee_benchmark.benchmarking()
 
@@ -358,7 +352,7 @@ if __name__ == "__main__":
     # f_list = ['F:\\lstm_data\\prob_distribution.h5']
     # vn_benchmark = benchmark_factory(vn_models, f_list, flp=flp, exp_name="vn.test", mode="classification", pred_str_list=[0], lines_to_read=10000, lines_to_jump=10000)
     # vn_benchmark.benchmarking()
-    # print("complete")
+    print("complete")
     import winsound
     frequency = 2500  # Set Frequency To 2500 Hertz
     duration = 1000  # Set Duration To 1000 ms == 1 second

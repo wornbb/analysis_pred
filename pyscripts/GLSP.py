@@ -151,11 +151,11 @@ def loss_correlation(y_true, selected):
 
 if __name__ == "__main__":
     fname = "C:\\Users\\Yi\\Desktop\\Yaswan2c\\Yaswan2c.gridIR"
-    n = 10000
+    n = 100
     data = read_volt_grid(fname, n)
     models = []
     registered_count = []
-    for pred_str in [0,1,2,3,4,5]:
+    for pred_str in [0,5,10,20,40]:
         glsp = gl_model(pred_str=pred_str)
         glsp.fit(data)
         if glsp.validity:
@@ -165,8 +165,8 @@ if __name__ == "__main__":
             print(pred_str)
         import pickle
         print("complete")
-        pickle.dump(registered_count, open("gl.pred_str.registry2","wb"))
-        pickle.dump(models, open("gl.pred_str.models2","wb"))
+        pickle.dump(registered_count, open("gl.pred_str.registry","wb"))
+        pickle.dump(models, open("gl.pred_str.models","wb"))
     # fname = "C:\\Users\\Yi\\Desktop\\Yaswan2c\\Yaswan2c.gridIR"
     # n = 200
     # data = read_volt_grid(fname, n)

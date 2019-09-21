@@ -222,16 +222,16 @@ class ee_model():
                     flp[unit[0]] = np.array(unit[1:], dtype=np.float64)
         return flp
     def init_predicor(self):
-        #self.predictor = BaggingRegressor(base_estimator=LinearRegression(), n_estimators=5, n_jobs=6)
-        self.predictor = LinearRegression(fit_intercept=False)
+        self.predictor = BaggingRegressor(base_estimator=LinearRegression(fit_intercept=False), n_estimators=5, n_jobs=6)
+        #self.predictor = LinearRegression(fit_intercept=False)
     def fit(self, data):
         # sensor selection
         self.selector.train(self.training_data)
         self.selected_sensors = self.selector.predict()
         # data filtering
         self.selected_x = data[self.selected_sensors,:data.shape[1]-self.pred_str].T
-        y = data[:,self.pred_str:].T 
         x = self.selected_x
+        y = data[:,self.pred_str:].T 
         # if self.apply_norm:
         #     y = self.scaler.fit_transform(y)
         #     x = self.scaler.fit_transform(self.selected_x)
