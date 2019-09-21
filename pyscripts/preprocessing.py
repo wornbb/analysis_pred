@@ -14,7 +14,7 @@ from tensorflow_model_optimization.sparsity import keras as sparsity
 
 from clr_callback import *
 from loading import *
-
+from multiprocessing import Pool
 from sklearn.preprocessing import StandardScaler
 class MyScaler():
     def fit_transform(self,x):
@@ -85,12 +85,34 @@ class preScaler():
             self.save_y = f.create_dataset("y", data=y)
 if __name__ == "__main__":
     if os.name == 'nt':
+        load_dir = "F:\\lstm_data\\"
         grid_load_fname = "F:\\lstm_data\\VoltNet_2c.h5"
         scaled_grid_save_fname = "F:\\lstm_data\\Scaled_VoltNet_2c.h5"
 
         lstm_load_fname = "F:\\lstm_data\\lstm_2c.h5.0.25"
         scaled_lstm_load_fname = "F:\\lstm_data\\Scaled_lstm_2c.h5.0.25"
 
+        grid_load_fname_list = [load_dir + "VoltNet_2c.str0.h5", 
+                                load_dir + "VoltNet_2c.str5.h5",
+                                load_dir + "VoltNet_2c.str10.h5",
+                                load_dir + "VoltNet_2c.str20.h5",
+                                load_dir + "VoltNet_2c.str40.h5",]
+        scaled_grid_save_fname_list = [load_dir + "Scaled_" + "VoltNet_2c.str0.h5", 
+                                load_dir + "Scaled_" + "VoltNet_2c.str5.h5",
+                                load_dir + "Scaled_" + "VoltNet_2c.str10.h5",
+                                load_dir + "Scaled_" + "VoltNet_2c.str20.h5",
+                                load_dir + "Scaled_" + "VoltNet_2c.str40.h5",]
+
+        lstm_load_fname_list = [load_dir + "lstm_2c.h5.str0", 
+                                load_dir + "lstm_2c.h5.str5",
+                                load_dir + "lstm_2c.h5.str10",
+                                load_dir + "lstm_2c.h5.str20",
+                                load_dir + "lstm_2c.h5.str40",]
+        scaled_lstm_load_fname_list = [load_dir + "Scaled_" + "lstm_2c.h5.str0", 
+                                load_dir + "Scaled_" + "lstm_2c.h5.str5",
+                                load_dir + "Scaled_" + "lstm_2c.h5.str10",
+                                load_dir + "Scaled_" + "lstm_2c.h5.str20",
+                                load_dir + "Scaled_" + "lstm_2c.h5.str40",]
         lstm_model = 'voltnet..selector..16-0.961-0.130.hdf5'
         scaled_load_grid_file = "Scaled_VoltNet_2c.h5"
         prob_distribution_file = "F:\\lstm_data\\prob_distribution.h5"
@@ -104,7 +126,36 @@ if __name__ == "__main__":
         lstm_model = 'residual.4.biLSTM.45.10-0.951-0.140.hdf5'
         scaled_load_grid_file = "F:/media/yi/yi_final_resort/Scaled_VoltNet_2c.h5"
         prob_distribution_file = "F:/media/yi/yi_final_resort/prob_distribution.h5"
+
+        load_dir = "/media/yi/yi_final_resort/"
+        grid_load_fname_list = [load_dir + "VoltNet_2c.str0.h5", 
+                                load_dir + "VoltNet_2c.str5.h5",
+                                load_dir + "VoltNet_2c.str10.h5",
+                                load_dir + "VoltNet_2c.str20.h5",
+                                load_dir + "VoltNet_2c.str40.h5",]
+        scaled_grid_save_fname_list = [load_dir + "Scaled_" + "VoltNet_2c.str0.h5", 
+                                load_dir + "Scaled_" + "VoltNet_2c.str5.h5",
+                                load_dir + "Scaled_" + "VoltNet_2c.str10.h5",
+                                load_dir + "Scaled_" + "VoltNet_2c.str20.h5",
+                                load_dir + "Scaled_" + "VoltNet_2c.str40.h5",]
+
+        lstm_load_fname_list = [load_dir + "lstm_2c.h5.str0", 
+                                load_dir + "lstm_2c.h5.str5",
+                                load_dir + "lstm_2c.h5.str10",
+                                load_dir + "lstm_2c.h5.str20",
+                                load_dir + "lstm_2c.h5.str40",]
+        scaled_lstm_load_fname_list = [load_dir + "Scaled_" + "lstm_2c.h5.str0", 
+                                load_dir + "Scaled_" + "lstm_2c.h5.str5",
+                                load_dir + "Scaled_" + "lstm_2c.h5.str10",
+                                load_dir + "Scaled_" + "lstm_2c.h5.str20",
+                                load_dir + "Scaled_" + "lstm_2c.h5.str40",]
     from PyInquirer import style_from_dict, Token, prompt
+    def grid_task(load_f, save_f):
+        grid_processor = preScaler(load_f, save_f)
+        grid_processor.scale_grid_trace()
+    def lstm_task(load_f, save_f):
+        grid_processor = preScaler(load_f, save_f)
+        grid_processor.sacle_lstm()
     questions = [
         {
             'type': 'checkbox',
@@ -126,7 +177,15 @@ if __name__ == "__main__":
                 {
                     'name': 'raw benchmarking lstm',
                     'value': 4
-                }
+                },
+                {
+                    'name': 'Custom grid',
+                    'value': 5
+                },
+                {
+                    'name': 'Custom LSTM',
+                    'value': 6
+                },
             ],
             'validate': lambda answer: 'You must choose at least one process.' \
                 if len(answer) == 0 else True
@@ -159,7 +218,18 @@ if __name__ == "__main__":
             for node in range(100): 
                 pred = sensor_model.predict(x[node:node+1,:,0:1])
                 print(pred)
-
+    if 5 in answers['selection']:
+        with Pool(processes=3) as pool: 
+            results = pool.starmap(grid_task, zip(grid_load_fname_list, scaled_grid_save_fname_list), chunksize=3)
+            # for load_f, save_f in zip(grid_load_fname_list, scaled_grid_save_fname_list):
+            #     grid_processor = preScaler(load_f, save_f)
+            #     grid_processor.scale_grid_trace()
+    if 6 in answers['selection']:
+        with Pool(processes=3) as pool: 
+            results = pool.starmap(lstm_task, zip(lstm_load_fname_list, scaled_lstm_load_fname_list), chunksize=3)
+        # for load_f, save_f in zip(lstm_load_fname_list, scaled_lstm_load_fname_list):
+        #     grid_processor = preScaler(load_f, save_f)
+        #     grid_processor.sacle_lstm()
 # f_list = [r"balanced_gird_sensor.Yaswan2c_desktop.h5"]
 # with h5py.File(f_list[0], 'r') as f:
 #       x_shape = f["x"].shape
