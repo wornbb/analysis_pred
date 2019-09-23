@@ -326,16 +326,16 @@ if __name__ == "__main__":
         "/data/yi/voltVio/analysis/raw/" + "freqmine2c"+ ".gridIR",
         "/data/yi/voltVio/analysis/raw/" + "facesim2c"+ ".gridIR",
         ]
-    lines_to_read = 500
-    lines_to_jump = 150
+    lines_to_read = 1000
+    lines_to_jump = 10000
     f_list = ["F:\\lstm_data\\VoltNet_2c.h5.str0.h5"]
     #gp_models = "gl.model" 
-    pred_str_list = [0,5,10,20,40]
-    gp_models = "gl.pred_str.models" 
-    gp_benchmark = benchmark_factory(gp_models, f_list,flp=flp, exp_name="gp",mode="regression",
-                                     pred_str_list=pred_str_list, lines_to_read=lines_to_read, lines_to_jump=lines_to_jump)
-    gp_benchmark.benchmarking()
-    #gp_benchmark.benchmark_from_ckp(ckp_list=["gp.regression.all_evaluations"])
+    pred_str_list = [0,5,10,20,30]
+    # gp_models = "gl.pred_str.models" 
+    # gp_benchmark = benchmark_factory(gp_models, f_list,flp=flp, exp_name="gp",mode="regression",
+    #                                  pred_str_list=pred_str_list, lines_to_read=lines_to_read, lines_to_jump=lines_to_jump)
+    # gp_benchmark.benchmarking()
+    # #gp_benchmark.benchmark_from_ckp(ckp_list=["gp.regression.all_evaluations"])
 
     ee_models = "ee.original.pred_str.model"
     ee_benchmark = benchmark_factory(ee_models, f_list,flp=flp, exp_name="ee.original",mode="regression",

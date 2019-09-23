@@ -143,10 +143,10 @@ class voltnet_model():
         return [0, mean_squared_error(y, y_pred)]
 class voltnet_LSTM():
     def __init__(self, pred_str=0):
+        self.pred_str = pred_str
         self.callbacks = []
         self.prepare_callback_ckp()
         self.prepare_callback_csv()
-        self.pred_str = pred_str
     def fit(self, x, y, x_test, y_test):
         # NN hyperparameter
         rnn_dropout = 0.4
@@ -185,10 +185,11 @@ class voltnet_LSTM():
         self.clr = CyclicLR(base_lr=0.05, max_lr=0.15, mode='triangular2')
         self.callbacks.append(self.clr)
     def prepare_callback_ckp(self):
-        filepath = "voltnet." + ".selector."  + ".{epoch:02d}-{val_acc:.3f}-{val_loss:.3f}.hdf5"
+        filepath = "voltnet." + ".selector."  +"pred_str." + str(self.pred_str) + ".{epoch:02d}-{val_acc:.3f}-{val_loss:.3f}.hdf5"
         self.checkpoint = ModelCheckpoint(filepath, monitor='val_acc',save_best_only=True, verbose=1, mode='max')
         self.callbacks.append(self.checkpoint)
-    def prepare_callback_csv(self, fname='training_residual.csv'):
+    def prepare_callback_csv(self):
+        fname = "lstm.pred_str." + str(self.pred_str) + ".log"
         try:
             os.remove(fname)
         except:
@@ -211,7 +212,18 @@ def load_vn(model_fname, selector_h5, predictor_h5):
     model.callbacks=[]
     return model
 if __name__ == "__main__":
-    a = voltnet_model(pred_str=0)
-    a.fit_from_prob()
-    a.save()
-    #a.load()
+    # a = voltnet_model(pred_str=0)
+    # a.fit_from_prob()
+    # a.save()
+    pred_str_list = [5,10,20,40]
+    io_dir = "F:\\lstm_data\\"
+    file_base_name = "Scaled_lstm_2c.h5.str"
+    train_size = 10000
+    test_size = 3000
+    for pred_str in pred_str_list:
+        load_file = io_dir + file_base_name + str(pred_str)
+        with h5py.File(load_file,'r') as f:
+            tag = f["y"][:train_size + test_size]
+            x = f["x"][:train_size + test_size,-34:,...]
+        lstm = voltnet_LSTM(pred_str=pred_str)
+        lstm.fit(x=x[:train_size,...], y=tag[:train_size], x_test=x[train_size:train_size+test_size,...], y_test=tag[train_size:train_size+test_size,...])

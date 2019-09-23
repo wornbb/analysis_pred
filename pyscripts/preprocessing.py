@@ -56,7 +56,8 @@ class preScaler():
     def __init__(self, load_fname, save_fname):
         self.load_fname = load_fname
         self.save_fname = save_fname
-        self.scaler = MyScaler()
+        #self.scaler = MyScaler()
+        self.scaler = MinMaxScaler(feature_range=(-0.5, 0.5))
         with h5py.File(self.load_fname, 'r') as f:
             self.load_x = f["x"][()]
             self.load_y = f["y"][()]
