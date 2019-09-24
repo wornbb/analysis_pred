@@ -56,8 +56,8 @@ class preScaler():
     def __init__(self, load_fname, save_fname):
         self.load_fname = load_fname
         self.save_fname = save_fname
-        #self.scaler = MyScaler()
-        self.scaler = MinMaxScaler(feature_range=(-0.5, 0.5))
+        self.scaler = MyScaler()
+        #self.scaler = MinMaxScaler(feature_range=(-0.5, 0.5))
         with h5py.File(self.load_fname, 'r') as f:
             self.load_x = f["x"][()]
             self.load_y = f["y"][()]
@@ -220,17 +220,17 @@ if __name__ == "__main__":
                 pred = sensor_model.predict(x[node:node+1,:,0:1])
                 print(pred)
     if 5 in answers['selection']:
-        with Pool(processes=3) as pool: 
-            results = pool.starmap(grid_task, zip(grid_load_fname_list, scaled_grid_save_fname_list), chunksize=3)
-            # for load_f, save_f in zip(grid_load_fname_list, scaled_grid_save_fname_list):
-            #     grid_processor = preScaler(load_f, save_f)
-            #     grid_processor.scale_grid_trace()
+        # with Pool(processes=3) as pool: 
+        #     results = pool.starmap(grid_task, zip(grid_load_fname_list, scaled_grid_save_fname_list), chunksize=3)
+            for load_f, save_f in zip(grid_load_fname_list, scaled_grid_save_fname_list):
+                grid_processor = preScaler(load_f, save_f)
+                grid_processor.scale_grid_trace()
     if 6 in answers['selection']:
-        with Pool(processes=3) as pool: 
-            results = pool.starmap(lstm_task, zip(lstm_load_fname_list, scaled_lstm_load_fname_list), chunksize=3)
-        # for load_f, save_f in zip(lstm_load_fname_list, scaled_lstm_load_fname_list):
-        #     grid_processor = preScaler(load_f, save_f)
-        #     grid_processor.sacle_lstm()
+        # with Pool(processes=3) as pool: 
+        #     results = pool.starmap(lstm_task, zip(lstm_load_fname_list, scaled_lstm_load_fname_list), chunksize=3)
+        for load_f, save_f in zip(lstm_load_fname_list, scaled_lstm_load_fname_list):
+            grid_processor = preScaler(load_f, save_f)
+            grid_processor.sacle_lstm()
 # f_list = [r"balanced_gird_sensor.Yaswan2c_desktop.h5"]
 # with h5py.File(f_list[0], 'r') as f:
 #       x_shape = f["x"].shape

@@ -143,10 +143,10 @@ class voltnet_model():
         return [0, mean_squared_error(y, y_pred)]
 class voltnet_LSTM():
     def __init__(self, pred_str=0):
-        self.pred_str = pred_str
         self.callbacks = []
         self.prepare_callback_ckp()
         self.prepare_callback_csv()
+        self.pred_str = pred_str
     def fit(self, x, y, x_test, y_test):
         # NN hyperparameter
         rnn_dropout = 0.4
@@ -155,7 +155,7 @@ class voltnet_LSTM():
         n = 45
         batch_size = 128
         # setting up lstm
-        inputs = Input(shape=(34,1))
+        inputs = Input(shape=(x.shape[1],1))
         for rnn in range(s):
             if rnn == 0:
                 lstm = Bidirectional(LSTM(n, recurrent_dropout=rnn_dropout, dropout=rnn_dropout, return_sequences=True))(inputs)
@@ -174,22 +174,21 @@ class voltnet_LSTM():
         self.model.compile(loss='binary_crossentropy', optimizer='RMSprop', metrics=['accuracy'])
         self.model.summary()
         print('Train...')  
-        self.model.fit(x[:x.shape[0]-self.pred_str,...], y[self.pred_str:],
+        self.model.fit(x, y,
             validation_data=(x_test, y_test),
             batch_size=batch_size,
             shuffle="batch",
-            epochs=50,
+            epochs=12,
             callbacks=self.callbacks,
             verbose=1)
     def prepare_callback_clr(self):
         self.clr = CyclicLR(base_lr=0.05, max_lr=0.15, mode='triangular2')
         self.callbacks.append(self.clr)
     def prepare_callback_ckp(self):
-        filepath = "voltnet." + ".selector."  +"pred_str." + str(self.pred_str) + ".{epoch:02d}-{val_acc:.3f}-{val_loss:.3f}.hdf5"
+        filepath = "voltnet." + ".selector."  + ".{epoch:02d}-{val_acc:.3f}-{val_loss:.3f}.hdf5"
         self.checkpoint = ModelCheckpoint(filepath, monitor='val_acc',save_best_only=True, verbose=1, mode='max')
         self.callbacks.append(self.checkpoint)
-    def prepare_callback_csv(self):
-        fname = "lstm.pred_str." + str(self.pred_str) + ".log"
+    def prepare_callback_csv(self, fname='training_residual.csv'):
         try:
             os.remove(fname)
         except:
@@ -218,12 +217,12 @@ if __name__ == "__main__":
     pred_str_list = [5,10,20,40]
     io_dir = "F:\\lstm_data\\"
     file_base_name = "Scaled_lstm_2c.h5.str"
-    train_size = 10000
+    train_size = 200000
     test_size = 3000
     for pred_str in pred_str_list:
         load_file = io_dir + file_base_name + str(pred_str)
         with h5py.File(load_file,'r') as f:
             tag = f["y"][:train_size + test_size]
-            x = f["x"][:train_size + test_size,-34:,...]
+            x = f["x"][:train_size + test_size,...]
         lstm = voltnet_LSTM(pred_str=pred_str)
         lstm.fit(x=x[:train_size,...], y=tag[:train_size], x_test=x[train_size:train_size+test_size,...], y_test=tag[train_size:train_size+test_size,...])
