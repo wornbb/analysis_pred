@@ -144,7 +144,7 @@ class benchmark_factory():
             for dataset in self.data_list:
                 benchmark = self.load_benchmark_data(dataset)
                 result = self.evaluator(model, benchmark[0], benchmark[1])
-                self.evaluation[dataset] = result
+                self.evaluation[dataset] = copy.deepcopy(result)
             self.all_evaluations.append(copy.deepcopy(self.evaluation))
             self.loaded_model += 1
         pickle.dump(self.all_evaluations, open(self.save_prefix + ".all_evaluations",'wb'))
@@ -162,7 +162,7 @@ class benchmark_factory():
         print("Complete")
     def generate_stat_tbl(self):
         if self.mode == "regression":
-            fname_list = [basename(dataset)[:-7] + ".stat_tbl" + ".csv" for dataset in self.data_list]
+            fname_list = [basename(dataset)[:-8] + ".stat_tbl" + ".csv" for dataset in self.data_list]
             columns = ["Mean_Squared_Error", "Standard_Deviation_Error", "R^2"]
             for model_eval, pred_str in zip(self.all_evaluations, self.pred_str_list):
                 row_label = self.exp_name + ".pred_str." + str(pred_str)
@@ -248,8 +248,8 @@ class benchmark_factory():
             plt.savefig(fname)
             plt.close()
     def generate_confusion_matrix(self):
-        cfm = np.zeros(shape=(2,2))
         for model_eval, pred_str in zip(self.all_evaluations, self.pred_str_list):
+            cfm = np.zeros(shape=(2,2))
             for benchmark_result in model_eval.values():
                 cfm[0,0] += benchmark_result["tp"]
                 cfm[0,1] += benchmark_result["fp"]
@@ -328,14 +328,15 @@ if __name__ == "__main__":
         ]
     lines_to_read = 1000
     lines_to_jump = 10000
-    f_list = ["F:\\lstm_data\\VoltNet_2c.h5.str0.h5"]
+    f_list = ["F:\\lstm_data\\VoltNet_2c.str0.h5"]
     #gp_models = "gl.model" 
     pred_str_list = [0,5,10,20,30]
-    # gp_models = "gl.pred_str.models" 
-    # gp_benchmark = benchmark_factory(gp_models, f_list,flp=flp, exp_name="gp",mode="regression",
-    #                                  pred_str_list=pred_str_list, lines_to_read=lines_to_read, lines_to_jump=lines_to_jump)
-    # gp_benchmark.benchmarking()
-    # #gp_benchmark.benchmark_from_ckp(ckp_list=["gp.regression.all_evaluations"])
+    #gp_models = "gl.pred_str.models" 
+    gp_models = "gl.pred_str.models.test.mean.cluster" 
+    gp_benchmark = benchmark_factory(gp_models, f_list,flp=flp, exp_name="gp",mode="regression",
+                                     pred_str_list=pred_str_list, lines_to_read=lines_to_read, lines_to_jump=lines_to_jump)
+    gp_benchmark.benchmarking()
+    #gp_benchmark.benchmark_from_ckp(ckp_list=["gp.regression.all_evaluations"])
 
     ee_models = "ee.original.pred_str.model"
     ee_benchmark = benchmark_factory(ee_models, f_list,flp=flp, exp_name="ee.original",mode="regression",
