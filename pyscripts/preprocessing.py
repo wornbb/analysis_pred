@@ -40,8 +40,11 @@ class lstm_sweep():
         self.x = self.lf["x"]
         self.y = self.lf["y"]
         self.data_shape = self.x.shape
-    def process(self):
-        for sample in range(self.data_shape[0]):
+    def process(self, samples=None):
+        if samples == None:
+            samples = self.data_shape[0]
+        for sample in range(samples):
+            p = self.x[sample,:,:,:]
             self.saveX[sample,:] = self.lstm_model.predict(self.x[sample,:,:,:], batch_size=self.data_shape[1]).flatten()
             if sample % 10000 == 0:
                 self.sf.flush()
@@ -129,17 +132,18 @@ if __name__ == "__main__":
         prob_distribution_file = "F:/media/yi/yi_final_resort/prob_distribution.h5"
 
         load_dir = "/media/yi/yi_final_resort/"
-        grid_load_fname_list = [load_dir + "VoltNet_2c.str0.h5", 
-                                load_dir + "VoltNet_2c.str5.h5",
-                                load_dir + "VoltNet_2c.str10.h5",
-                                load_dir + "VoltNet_2c.str20.h5",
-                                load_dir + "VoltNet_2c.str40.h5",]
-        scaled_grid_save_fname_list = [load_dir + "Scaled_" + "VoltNet_2c.str0.h5", 
-                                load_dir + "Scaled_" + "VoltNet_2c.str5.h5",
-                                load_dir + "Scaled_" + "VoltNet_2c.str10.h5",
-                                load_dir + "Scaled_" + "VoltNet_2c.str20.h5",
-                                load_dir + "Scaled_" + "VoltNet_2c.str40.h5",]
-
+        # grid_load_fname_list = [load_dir + "VoltNet_2c.str0.h5", 
+        #                         load_dir + "VoltNet_2c.str5.h5",
+        #                         load_dir + "VoltNet_2c.str10.h5",
+        #                         load_dir + "VoltNet_2c.str20.h5",
+        #                         load_dir + "VoltNet_2c.str40.h5",]
+        # scaled_grid_save_fname_list = [load_dir + "Scaled_" + "VoltNet_2c.str0.h5", 
+        #                         load_dir + "Scaled_" + "VoltNet_2c.str5.h5",
+        #                         load_dir + "Scaled_" + "VoltNet_2c.str10.h5",
+        #                         load_dir + "Scaled_" + "VoltNet_2c.str20.h5",
+        #                         load_dir + "Scaled_" + "VoltNet_2c.str40.h5",]
+        grid_load_fname_list = [load_dir + "VoltNet_2c.str10.h5"]
+        scaled_grid_save_fname_list = [load_dir + "Scaled_" + "VoltNet_2c.str10.h5_new"]
         lstm_load_fname_list = [load_dir + "lstm_2c.h5.str0", 
                                 load_dir + "lstm_2c.h5.str5",
                                 load_dir + "lstm_2c.h5.str10",
