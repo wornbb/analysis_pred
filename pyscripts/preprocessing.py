@@ -118,16 +118,16 @@ if __name__ == "__main__":
     else:
         load_dir = "/media/yi/yi_final_resort/"
         lstm_load_list = [
-                path.join("F:\\","blackscholes2c" + ".lstm"),
-                path.join("F:\\","bodytrack2c" + ".lstm"),
-                path.join("F:\\","freqmine2c" + ".lstm"),
-                path.join("F:\\","facesim2c" + ".lstm"),
+                path.join(load_dir,"blackscholes2c" + ".lstm"),
+                path.join(load_dir,"bodytrack2c" + ".lstm"),
+                path.join(load_dir,"freqmine2c" + ".lstm"),
+                path.join(load_dir,"facesim2c" + ".lstm"),
         ]
         net_load_list = [
-                path.join("F:\\","blackscholes2c" + ".voltnet"),
-                path.join("F:\\","bodytrack2c" + ".voltnet"),
-                path.join("F:\\","freqmine2c" + ".voltnet"),
-                path.join("F:\\","facesim2c" + ".voltnet"),
+                path.join(load_dir,"blackscholes2c" + ".voltnet"),
+                path.join(load_dir,"bodytrack2c" + ".voltnet"),
+                path.join(load_dir,"freqmine2c" + ".voltnet"),
+                path.join(load_dir,"facesim2c" + ".voltnet"),
         ]
         #pred_str_list = [0,5,10,20]#,40]
         pred_str_list = [15,25,30,35]
