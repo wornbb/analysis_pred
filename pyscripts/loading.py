@@ -330,7 +330,7 @@ class voltnet_training_data_factory():
         self.thres = thres
         self.ref = ref
         self.global_vio = global_vio
-        self.balance = pos_percent
+        self.balance = pos_percent # this only affect lstm samples
         self.grid_trigger = grid_trigger
         self.grid_fsave = grid_fsave
         self.lstm_trigger = lstm_trigger

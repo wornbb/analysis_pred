@@ -6,13 +6,27 @@ from loading import *
 from tensorflow.keras.utils import to_categorical
 import os
 from loading import *
-
+from os import path
 if os.name == 'nt':
       name = "Yaswan2c_desktop"
-      fname = "F:\\Yaswan2c\\Yaswan2c.gridIR"
-      f_list = [fname]
-      lstm_save = "lstm_2c.h5"
-      net_save = "VoltNet_2c.h5"
+      f_list = [
+            path.join("F:\\gridIR","blackscholes2c" + ".gridIR"),
+            path.join("F:\\gridIR","bodytrack2c" + ".gridIR"),
+            path.join("F:\\gridIR","freqmine2c" + ".gridIR"),
+            path.join("F:\\gridIR","facesim2c" + ".gridIR"),
+      ]
+      lstm_save = [
+            path.join("F:\\","blackscholes2c" + ".lstm"),
+            path.join("F:\\","bodytrack2c" + ".lstm"),
+            path.join("F:\\","freqmine2c" + ".lstm"),
+            path.join("F:\\","facesim2c" + ".lstm"),
+      ]
+      net_save = [
+            path.join("F:\\","blackscholes2c" + ".voltnet"),
+            path.join("F:\\","bodytrack2c" + ".voltnet"),
+            path.join("F:\\","freqmine2c" + ".voltnet"),
+            path.join("F:\\","facesim2c" + ".voltnet"),
+      ]
 else:
       f_list = [
       "/data/yi/voltVio/analysis/raw/" + "blackscholes2c" + ".gridIR",
@@ -28,12 +42,17 @@ lstm_samples = 0
 grid_samples = 0
 balance_list = [0.1, 0.15, 0.25, 0.3]
 # generating multiply training set with different pred_str
-pred_str_list = [0,5,10,20,40]
+#pred_str_list = [0,5,10,20]#,40]
+pred_str_list = [15,25,30,35]
+#for fname,lstm_name,net_name in zip(f_list,lstm_save, net_save):
+fname = f_list[0]
+lstm_name = lstm_save[0]
+net_name = net_save[0]
 for pred_str in pred_str_list:
-      balancing_lstm_save =  lstm_save + ".str" + str(pred_str)
-      balancing_grid_save =  net_save + ".str" + str(pred_str)
-      trace = 50 + pred_str
-      generator = voltnet_training_data_factory(f_list,trace=trace, ref=1, pred_str=pred_str, thres=4, pos_percent=0.5, grid_fsave=balancing_grid_save, lstm_fsave=balancing_lstm_save)
+      balancing_lstm_save =  lstm_name + ".str" + str(pred_str)
+      balancing_grid_save =  net_name + ".str" + str(pred_str)
+      trace = 70 + pred_str
+      generator = voltnet_training_data_factory([fname],trace=trace, ref=1, pred_str=pred_str, thres=4, pos_percent=0.25, grid_fsave=balancing_grid_save, lstm_fsave=balancing_lstm_save)
       generator.generate()
 # # generating data for regression weakness plot
 # balancing_grid_save =  dump + "overall_regression_testing.h5"

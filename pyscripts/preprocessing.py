@@ -16,6 +16,7 @@ from clr_callback import *
 from loading import *
 from multiprocessing import Pool
 from sklearn.preprocessing import StandardScaler
+from os import path
 class MyScaler():
     def fit_transform(self,x):
         transformed = (x - 1) * 100
@@ -24,32 +25,39 @@ class lstm_sweep():
     """ process traced grid to produce grid of probabilities.
         Only process 1 file at a time, because we assume the data loaded is already combined.
     """
-    def __init__(self, lstm_model='residual.4.biLSTM.45.10-0.951-0.140.hdf5', scaled_grid_fname=[], save_fname=[]):
-        self.lstm_model = load_frozen_lstm(lstm_model)
+    def __init__(self, lstm_model='residual.4.biLSTM.45.10-0.951-0.140.hdf5', scaled_grid_fname=[], save_fname=[], trace_len=50, mode="soft"):
+        self.unlock = True
+        self.len = trace_len
         self.load_fname = scaled_grid_fname
         self.save_fname = save_fname
-        self.open_for_read()
+        self.mode = mode
         self.open_for_write()
+        if self.unlock is True:
+            self.lstm_model = load_frozen_lstm(lstm_model)
+            self.open_for_read()
     def open_for_write(self):
-        self.sf = h5py.File(self.save_fname, 'w')
-        self.saveX = self.sf.create_dataset("x", shape=(self.data_shape[0], self.data_shape[1]), chunks=(1,self.data_shape[1]))
-        self.saveY = self.sf.create_dataset("y", data=self.y)
-
+        if self.mode == "soft" and path.exists(self.save_fname):
+            self.unlock = False
+        else:
+            self.sf = h5py.File(self.save_fname, 'w')
+            self.saveX = self.sf.create_dataset("x", shape=(self.data_shape[0], self.data_shape[1]), chunks=(1,self.data_shape[1]))
+            self.saveY = self.sf.create_dataset("y", data=self.y)
     def open_for_read(self):
         self.lf = h5py.File(self.load_fname, 'r')
         self.x = self.lf["x"]
         self.y = self.lf["y"]
         self.data_shape = self.x.shape
+        #self.samples = int(self.data_shape[0] * 0.1)
     def process(self, samples=None):
-        if samples == None:
-            samples = self.data_shape[0]
-        for sample in range(samples):
-            p = self.x[sample,:,:,:]
-            self.saveX[sample,:] = self.lstm_model.predict(self.x[sample,:,:,:], batch_size=self.data_shape[1]).flatten()
-            if sample % 10000 == 0:
-                self.sf.flush()
-        self.sf.close()
-        self.lf.close()
+        if self.unlock:
+            if samples == None:
+                samples = self.data_shape[0]
+            for sample in range(samples):
+                self.saveX[sample,:] = self.lstm_model.predict(self.x[sample,:,-self.len:,...], batch_size=self.data_shape[1]).flatten()
+                if sample % 10000 == 0:
+                    self.sf.flush()
+            self.sf.close()
+            self.lf.close()
 class preScaler():
     """scale the traced_grid and LSTM trace data for training
     Method:
@@ -75,7 +83,7 @@ class preScaler():
             for sample in range(self.loaded_samples):
                 self.save_x[sample,:,:,0] = self.scaler.fit_transform(self.load_x[sample,:,:,0])
                 f.flush()
-    def sacle_lstm(self):
+    def scale_lstm(self):
         x = np.squeeze(self.load_x, axis=(2))
         y = self.load_y.flatten().astype('int')
         shuffle_index = np.arange(y.shape[0])
@@ -89,71 +97,43 @@ class preScaler():
             self.save_y = f.create_dataset("y", data=y)
 if __name__ == "__main__":
     if os.name == 'nt':
-        load_dir = "F:\\lstm_data\\"
-        grid_load_fname = "F:\\lstm_data\\VoltNet_2c.h5"
-        scaled_grid_save_fname = "F:\\lstm_data\\Scaled_VoltNet_2c.h5"
-
-        lstm_load_fname = "F:\\lstm_data\\lstm_2c.h5.0.25"
-        scaled_lstm_load_fname = "F:\\lstm_data\\Scaled_lstm_2c.h5.0.25"
-
-        grid_load_fname_list = [load_dir + "VoltNet_2c.str0.h5", 
-                                load_dir + "VoltNet_2c.str5.h5",
-                                load_dir + "VoltNet_2c.str10.h5",
-                                load_dir + "VoltNet_2c.str20.h5",
-                                load_dir + "VoltNet_2c.str40.h5",]
-        scaled_grid_save_fname_list = [load_dir + "Scaled_" + "VoltNet_2c.str0.h5", 
-                                load_dir + "Scaled_" + "VoltNet_2c.str5.h5",
-                                load_dir + "Scaled_" + "VoltNet_2c.str10.h5",
-                                load_dir + "Scaled_" + "VoltNet_2c.str20.h5",
-                                load_dir + "Scaled_" + "VoltNet_2c.str40.h5",]
-
-        lstm_load_fname_list = [load_dir + "lstm_2c.h5.str0", 
-                                load_dir + "lstm_2c.h5.str5",
-                                load_dir + "lstm_2c.h5.str10",
-                                load_dir + "lstm_2c.h5.str20",
-                                load_dir + "lstm_2c.h5.str40",]
-        scaled_lstm_load_fname_list = [load_dir + "Scaled_" + "lstm_2c.h5.str0", 
-                                load_dir + "Scaled_" + "lstm_2c.h5.str5",
-                                load_dir + "Scaled_" + "lstm_2c.h5.str10",
-                                load_dir + "Scaled_" + "lstm_2c.h5.str20",
-                                load_dir + "Scaled_" + "lstm_2c.h5.str40",]
+        load_dir = "F:\\"
+        lstm_load_list = [
+                path.join("F:\\","blackscholes2c" + ".lstm"),
+                path.join("F:\\","bodytrack2c" + ".lstm"),
+                path.join("F:\\","freqmine2c" + ".lstm"),
+                path.join("F:\\","facesim2c" + ".lstm"),
+        ]
+        net_load_list = [
+                path.join("F:\\","blackscholes2c" + ".voltnet"),
+                path.join("F:\\","bodytrack2c" + ".voltnet"),
+                path.join("F:\\","freqmine2c" + ".voltnet"),
+                path.join("F:\\","facesim2c" + ".voltnet"),
+        ]
+        #pred_str_list = [0,5,10,20]#,40]
+        pred_str_list = [15,25,30,35]
         lstm_model = 'voltnet..selector..16-0.961-0.130.hdf5'
         scaled_load_grid_file = "Scaled_VoltNet_2c.h5"
         prob_distribution_file = "F:\\lstm_data\\prob_distribution.h5"
     else:
-        grid_load_fname = "/media/yi/yi_final_resort/VoltNet_2c.h5"
-        scaled_grid_save_fname = "/media/yi/yi_final_resort/Scaled_VoltNet_2c.h5"
-
-        lstm_load_fname = "/media/yi/yi_final_resort/lstm_2c.h5.0.25"
-        scaled_lstm_load_fname = "/media/yi/yi_final_resort/Scaled_lstm_2c.h5.0.25"
-
-        lstm_model = 'residual.4.biLSTM.45.10-0.951-0.140.hdf5'
-        scaled_load_grid_file = "F:/media/yi/yi_final_resort/Scaled_VoltNet_2c.h5"
-        prob_distribution_file = "F:/media/yi/yi_final_resort/prob_distribution.h5"
-
         load_dir = "/media/yi/yi_final_resort/"
-        # grid_load_fname_list = [load_dir + "VoltNet_2c.str0.h5", 
-        #                         load_dir + "VoltNet_2c.str5.h5",
-        #                         load_dir + "VoltNet_2c.str10.h5",
-        #                         load_dir + "VoltNet_2c.str20.h5",
-        #                         load_dir + "VoltNet_2c.str40.h5",]
-        # scaled_grid_save_fname_list = [load_dir + "Scaled_" + "VoltNet_2c.str0.h5", 
-        #                         load_dir + "Scaled_" + "VoltNet_2c.str5.h5",
-        #                         load_dir + "Scaled_" + "VoltNet_2c.str10.h5",
-        #                         load_dir + "Scaled_" + "VoltNet_2c.str20.h5",
-        #                         load_dir + "Scaled_" + "VoltNet_2c.str40.h5",]
-        grid_load_fname_list = [load_dir + "VoltNet_2c.str10.h5"]
-        scaled_grid_save_fname_list = [load_dir + "Scaled_" + "VoltNet_2c.str10.h5_new"]
-        lstm_load_fname_list = [load_dir + "lstm_2c.h5.str0", 
-                                load_dir + "lstm_2c.h5.str5",
-                                load_dir + "lstm_2c.h5.str10",
-                                load_dir + "lstm_2c.h5.str20",
-                                load_dir + "lstm_2c.h5.str40",]
-        scaled_lstm_load_fname_list = [load_dir + "Scaled_" + "lstm_2c.h5.str0", 
-                                load_dir + "Scaled_" + "lstm_2c.h5.str5",
-                                load_dir + "Scaled_" + "lstm_2c.h5.str10",
-                                load_dir + "Scaled_" + "lstm_2c.h5.str20",
-                                load_dir + "Scaled_" + "lstm_2c.h5.str40",]
+        lstm_load_list = [
+                path.join("F:\\","blackscholes2c" + ".lstm"),
+                path.join("F:\\","bodytrack2c" + ".lstm"),
+                path.join("F:\\","freqmine2c" + ".lstm"),
+                path.join("F:\\","facesim2c" + ".lstm"),
+        ]
+        net_load_list = [
+                path.join("F:\\","blackscholes2c" + ".voltnet"),
+                path.join("F:\\","bodytrack2c" + ".voltnet"),
+                path.join("F:\\","freqmine2c" + ".voltnet"),
+                path.join("F:\\","facesim2c" + ".voltnet"),
+        ]
+        #pred_str_list = [0,5,10,20]#,40]
+        pred_str_list = [15,25,30,35]
+        lstm_model = 'voltnet..selector..16-0.961-0.130.hdf5'
+        scaled_load_grid_file = "Scaled_VoltNet_2c.h5"
+        prob_distribution_file = "F:\\lstm_data\\prob_distribution.h5"
     from PyInquirer import style_from_dict, Token, prompt
     def grid_task(load_f, save_f):
         grid_processor = preScaler(load_f, save_f)
@@ -168,11 +148,11 @@ if __name__ == "__main__":
             'name': 'selection',
             'choices': [ 
                 {
-                    'name': 'Scale grid trace',
+                    'name': 'Scale training grid trace',
                     'value': 1
                 },
                 {
-                    'name': 'Scale LSTM trace',
+                    'name': 'Scale training LSTM trace',
                     'value':2
                 },
                 {
@@ -184,11 +164,11 @@ if __name__ == "__main__":
                     'value': 4
                 },
                 {
-                    'name': 'Custom grid',
+                    'name': 'All grid',
                     'value': 5
                 },
                 {
-                    'name': 'Custom LSTM',
+                    'name': 'All LSTM',
                     'value': 6
                 },
             ],
@@ -198,12 +178,27 @@ if __name__ == "__main__":
     ]
     answers = prompt(questions)
     if 1 in answers['selection']:
-        grid_processor = preScaler(grid_load_fname,scaled_grid_save_fname)
-        grid_processor.scale_grid_trace()
+        # only processing blackschole
+        for pred_str in pred_str_list:
+            balancing_lstm_load =  lstm_load_list[0] + ".str" + str(pred_str)
+            balancing_grid_load =  net_load_list[0] + ".str" + str(pred_str)
+            scaled_grid_save_fname = balancing_grid_load + ".scaled"
+            scaled_lstm_save_fname = balancing_lstm_load + ".scaled"
+            grid_processor = preScaler(balancing_grid_load,scaled_grid_save_fname)
+            grid_processor.scale_grid_trace()
     if 2 in answers['selection']:
-        grid_processor = preScaler(lstm_load_fname, scaled_lstm_load_fname)
-        grid_processor.sacle_lstm()
+        # only processing blackschole
+        for pred_str in pred_str_list:
+            balancing_lstm_load =  lstm_load_list[0] + ".str" + str(pred_str)
+            balancing_grid_load =  net_load_list[0] + ".str" + str(pred_str)
+            scaled_grid_save_fname = balancing_grid_load + ".scaled"
+            scaled_lstm_save_fname = balancing_lstm_load + ".scaled"
+            grid_processor = preScaler(balancing_lstm_load, scaled_lstm_save_fname)
+            grid_processor.scale_lstm()
     if 3 in answers['selection']:
+        lstm_model = "voltnet.selector.str.0.len50.hdf5"
+        scaled_load_grid_file = "F:\\blackscholes2c.voltnet.str0.scaled"
+        prob_distribution_file = "F:\\blackscholes2c.voltnet.str0.len50.prob"
         prob_generator = lstm_sweep(lstm_model, scaled_load_grid_file, prob_distribution_file)
         prob_generator.process()
     if 4 in answers['selection']:
@@ -226,15 +221,25 @@ if __name__ == "__main__":
     if 5 in answers['selection']:
         # with Pool(processes=3) as pool: 
         #     results = pool.starmap(grid_task, zip(grid_load_fname_list, scaled_grid_save_fname_list), chunksize=3)
-            for load_f, save_f in zip(grid_load_fname_list, scaled_grid_save_fname_list):
-                grid_processor = preScaler(load_f, save_f)
+        for lstm_load, net_load in zip(lstm_load_list, net_load_list):
+            for pred_str in pred_str_list:
+                balancing_lstm_load =  lstm_load + ".str" + str(pred_str)
+                balancing_grid_load =  net_load + ".str" + str(pred_str)
+                scaled_grid_save_fname = balancing_grid_load + ".scaled"
+                scaled_lstm_save_fname = balancing_lstm_load + ".scaled"
+                grid_processor = preScaler(balancing_grid_load, scaled_grid_save_fname)
                 grid_processor.scale_grid_trace()
     if 6 in answers['selection']:
         # with Pool(processes=3) as pool: 
         #     results = pool.starmap(lstm_task, zip(lstm_load_fname_list, scaled_lstm_load_fname_list), chunksize=3)
-        for load_f, save_f in zip(lstm_load_fname_list, scaled_lstm_load_fname_list):
-            grid_processor = preScaler(load_f, save_f)
-            grid_processor.sacle_lstm()
+        for lstm_load, net_load in zip(lstm_load_list, net_load_list):
+            for pred_str in pred_str_list:
+                balancing_lstm_load =  lstm_load + ".str" + str(pred_str)
+                balancing_grid_load =  net_load + ".str" + str(pred_str)
+                scaled_grid_save_fname = balancing_grid_load + ".scaled"
+                scaled_lstm_save_fname = balancing_lstm_load + ".scaled"
+                grid_processor = preScaler(balancing_lstm_load, scaled_lstm_save_fname)
+                grid_processor.scale_lstm()
 # f_list = [r"balanced_gird_sensor.Yaswan2c_desktop.h5"]
 # with h5py.File(f_list[0], 'r') as f:
 #       x_shape = f["x"].shape
